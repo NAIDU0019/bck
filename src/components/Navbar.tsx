@@ -191,7 +191,7 @@ export default function Navbar() {
           >
             🚨 Orders OPEN from June 1, 2025! 🚨 Please contact us via{" "}
             <a
-              href="https://wa.me/yourwhatsappnumber"
+              href="https://wa.me/7995960659"
               target="_blank"
               rel="noopener noreferrer"
               className="underline font-semibold"
