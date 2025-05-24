@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import Navbar from "@/components/Navbar";
@@ -14,34 +13,53 @@ const ProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
+  const [sortOption, setSortOption] = useState("featured");
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || product.category === selectedCategory;
     const matchesType = selectedType === "all" || product.type === selectedType;
-    
+
     return matchesSearch && matchesCategory && matchesType;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortOption === "price-low") {
+      return a.pricePerWeight["250"] - b.pricePerWeight["250"];
+    } else if (sortOption === "price-high") {
+      return b.pricePerWeight["250"] - a.pricePerWeight["250"];
+    } else if (sortOption === "newest") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else {
+      // "featured" or default: no change in order
+      return 0;
+    }
   });
 
   const categories = [
     { id: "all", name: "All Categories" },
     { id: "fruit", name: "Fruit Pickles" },
     { id: "vegetable", name: "Vegetable Pickles" },
-    { id: "non-veg", name: "Non-Veg Pickles" }
+    { id: "non-veg", name: "Non-Veg Pickles" },
   ];
 
   const types = [
     { id: "all", name: "All Types" },
     { id: "veg", name: "Vegetarian" },
-    { id: "non-veg", name: "Non-Vegetarian" }
+    { id: "non-veg", name: "Non-Vegetarian" },
   ];
 
   return (
     <>
       <Helmet>
         <title>Shop - ADHYAA PICKLES</title>
-        <meta name="description" content="Browse our premium collection of vegetarian and non-vegetarian pickles." />
+        <meta
+          name="description"
+          content="Browse our premium collection of vegetarian and non-vegetarian pickles."
+        />
       </Helmet>
       <div className="flex flex-col min-h-screen">
         <Navbar />
@@ -128,14 +146,17 @@ const ProductsPage = () => {
                   <div className="flex items-center">
                     <Filter className="h-5 w-5 mr-2 text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      Showing {filteredProducts.length} products
+                      Showing {sortedProducts.length} products
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm text-muted-foreground mr-2">Sort by:</span>
+                    <span className="text-sm text-muted-foreground mr-2">
+                      Sort by:
+                    </span>
                     <select
                       className="text-sm border rounded-md px-2 py-1"
-                      defaultValue="featured"
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value)}
                     >
                       <option value="featured">Featured</option>
                       <option value="price-low">Price: Low to High</option>
@@ -145,23 +166,26 @@ const ProductsPage = () => {
                   </div>
                 </div>
 
-                {filteredProducts.length === 0 ? (
+                {sortedProducts.length === 0 ? (
                   <div className="bg-white p-12 rounded-lg shadow-sm text-center">
                     <h3 className="text-xl font-medium mb-2">No products found</h3>
                     <p className="text-muted-foreground mb-4">
                       Try adjusting your search or filter criteria
                     </p>
-                    <Button onClick={() => {
-                      setSearchQuery("");
-                      setSelectedCategory("all");
-                      setSelectedType("all");
-                    }}>
+                    <Button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCategory("all");
+                        setSelectedType("all");
+                        setSortOption("featured");
+                      }}
+                    >
                       Reset Filters
                     </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredProducts.map((product) => (
+                    {sortedProducts.map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
                   </div>

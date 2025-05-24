@@ -1,3 +1,17 @@
+interface Product {
+  id: string;
+  name: string;
+  image: string;
+  category: string;
+  type: string;
+  pricePerWeight: { [key: string]: number };
+  stockPerWeight: { [key: string]: number };
+  tags?: string[];
+  description?: string;
+  ingredients?: string;
+  tagline?: string;
+}
+
 export const products: Product[] = [
   {
     id: "1",
@@ -8,11 +22,18 @@ export const products: Product[] = [
     description: "A tangy and spicy pickle made with raw mangoes, mustard oil, and a blend of aromatic spices.",
     ingredients: "Raw mangoes, mustard oil, salt, fenugreek seeds, fennel seeds, nigella seeds, red chili powder, turmeric powder, asafoetida",
     pricePerWeight: {
+      "100": 60,
       "250": 139,
       "500": 274,
-      "1000": 549
+      "1000": 549,
     },
-    tagline: "Tantalize your taste buds with our tangy mango magic!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 13,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Tantalize your taste buds with our tangy mango magic!",
   },
   {
     id: "2",
@@ -23,11 +44,18 @@ export const products: Product[] = [
     description: "A zingy and refreshing pickle made with fresh lemons and spices.",
     ingredients: "Lemons, salt, red chili powder, turmeric, mustard seeds, fenugreek, mustard oil",
     pricePerWeight: {
+      "100": 60,
       "250": 139,
       "500": 274,
-      "1000": 549
+      "1000": 549,
     },
-    tagline: "When life gives you lemons, pickle them to perfection!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "When life gives you lemons, pickle them to perfection!",
   },
   {
     id: "3",
@@ -38,11 +66,18 @@ export const products: Product[] = [
     description: "A colorful medley of vegetables pickled with our special blend.",
     ingredients: "Carrots, turnips, cauliflower, ginger, vinegar, mustard oil",
     pricePerWeight: {
+      "100": 60,
       "250": 139,
       "500": 274,
-      "1000": 549
+      "1000": 549,
     },
-    tagline: "Color, crunch, and spice in every bite!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Color, crunch, and spice in every bite!",
   },
   {
     id: "4",
@@ -53,11 +88,18 @@ export const products: Product[] = [
     description: "Garlic pickle that adds bold flavor to any meal.",
     ingredients: "Garlic, mustard oil, fenugreek seeds, fennel, turmeric, chili",
     pricePerWeight: {
+      "100": 60,
       "250": 139,
       "500": 274,
-      "1000": 549
+      "1000": 549,
     },
-    tagline: "Garlic lovers, rejoice in every pungent punch!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Garlic lovers, rejoice in every pungent punch!",
   },
   {
     id: "5",
@@ -68,11 +110,18 @@ export const products: Product[] = [
     description: "Spicy and flavorful chicken pickle made with authentic Andhra spices.",
     ingredients: "Chicken, mustard oil, chili powder, garlic, turmeric",
     pricePerWeight: {
+      "100": 130,
       "250": 299,
       "500": 498,
-      "1000": 999
+      "1000": 999,
     },
-    tagline: "Bold bites of Andhra-style chicken in every jar!"
+    stockPerWeight: {
+      "100": 5,
+      "250": 18,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Bold bites of Andhra-style chicken in every jar!",
   },
   {
     id: "6",
@@ -83,11 +132,18 @@ export const products: Product[] = [
     description: "Tangy and spicy fish pickle preserved in mustard oil.",
     ingredients: "Fish, garlic, chili powder, mustard oil, spices",
     pricePerWeight: {
+      "100": 100,
       "250": 199,
       "500": 369,
-      "1000": 1889
+      "1000": 1889,
     },
-    tagline: "Catch the coastal kick with every spoon!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Catch the coastal kick with every spoon!",
   },
   {
     id: "7",
@@ -98,11 +154,18 @@ export const products: Product[] = [
     description: "Fiery green chili pickle made with mustard oil and aromatic spices.",
     ingredients: "Green chilies, mustard oil, fenugreek, turmeric, asafoetida",
     pricePerWeight: {
+      "100": 55,
       "250": 119,
       "500": 209,
-      "1000": 379
+      "1000": 379,
     },
-    tagline: "For those who like it hot and tangy!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "For those who like it hot and tangy!",
   },
   {
     id: "8",
@@ -113,11 +176,18 @@ export const products: Product[] = [
     description: "Juicy prawns cooked and preserved in traditional pickle masala.",
     ingredients: "Prawns, mustard oil, garlic, ginger, vinegar",
     pricePerWeight: {
+      "100": 90,
       "250": 209,
       "500": 389,
-      "1000": 719
+      "1000": 719,
     },
-    tagline: "A sea of spice in every bite!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "A sea of spice in every bite!",
   },
   {
     id: "9",
@@ -128,11 +198,18 @@ export const products: Product[] = [
     description: "Zesty ginger pickle great for digestion and flavor enhancement.",
     ingredients: "Ginger, lemon juice, cumin, mustard oil, chili",
     pricePerWeight: {
+      "100": 45,
       "250": 99,
       "500": 179,
-      "1000": 329
+      "1000": 329,
     },
-    tagline: "Spice up your gut with a zingy twist!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Spice up your gut with a zingy twist!",
   },
   {
     id: "10",
@@ -143,11 +220,18 @@ export const products: Product[] = [
     description: "Slow-cooked tender mutton with bold spices.",
     ingredients: "Mutton, mustard oil, garlic, ginger, garam masala",
     pricePerWeight: {
+      "100": 100,
       "250": 219,
       "500": 399,
-      "1000": 749
+      "1000": 749,
     },
-    tagline: "Bold, rich and meaty – the perfect indulgence!"
+    stockPerWeight: {
+      "100": 5,
+      "250": 9,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Bold, rich and meaty – the perfect indulgence!",
   },
   {
     id: "13",
@@ -158,11 +242,18 @@ export const products: Product[] = [
     description: "Rich and spicy crab pickle that delivers coastal flavor with every bite.",
     ingredients: "Crab, mustard oil, chili powder, garlic, ginger, spices",
     pricePerWeight: {
+      "100": 110,
       "250": 249,
       "500": 469,
-      "1000": 899
+      "1000": 899,
     },
-    tagline: "Dive into oceanic delight with every spicy claw!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Dive into oceanic delight with every spicy claw!",
   },
   {
     id: "14",
@@ -173,11 +264,18 @@ export const products: Product[] = [
     description: "A fiery fusion of tangy gongura leaves and succulent chicken pieces.",
     ingredients: "Chicken, gongura leaves, mustard oil, red chili, garlic, spices",
     pricePerWeight: {
+      "100": 70,
       "250": 159,
       "500": 299,
-      "1000": 599
+      "1000": 599,
     },
-    tagline: "Tang meets spice in every bite!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Tang meets spice in every bite!",
   },
   {
     id: "15",
@@ -188,11 +286,18 @@ export const products: Product[] = [
     description: "Traditional sun-dried mango pickle infused with bold Indian spices.",
     ingredients: "Dry mango slices, mustard oil, salt, chili powder, asafoetida",
     pricePerWeight: {
+      "100": 55,
       "250": 129,
       "500": 239,
-      "1000": 449
+      "1000": 449,
     },
-    tagline: "Sun-kissed mango magic in every jar!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Sun-kissed mango magic in every jar!",
   },
   {
     id: "16",
@@ -201,47 +306,54 @@ export const products: Product[] = [
     category: "vegetable",
     type: "veg",
     description: "Juicy tomato pickle packed with Andhra-style flavors and fiery tang.",
-    ingredients: "Tomatoes, mustard oil, garlic, red chili powder, fenugreek",
+    ingredients: "Tomatoes, mustard oil, chili powder, salt, fenugreek seeds",
     pricePerWeight: {
-      "250": 129,
-      "500": 239,
-      "1000": 449
+      "100": 60,
+      "250": 139,
+      "500": 274,
+      "1000": 549,
     },
-    tagline: "Bold, bright, and bursting with flavor!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "A tangy tomato twist to spice up your meals!",
   },
   {
     id: "17",
-    name: "Red Chilli Pickle",
-    image: "/rchelli.jpg",
-    category: "spice",
+    name: "Red Chili Pickle",
+    image: "/redchilli.jpg",
+    category: "vegetable",
     type: "veg",
-    description: "Hot and intense red chilli pickle for spice lovers.",
-    ingredients: "Red chillies, mustard oil, fenugreek, mustard seeds, asafoetida",
+    description: "Fiery red chili pickle for spice lovers who dare to challenge their taste buds.",
+    ingredients: "Red chilies, mustard oil, fenugreek, turmeric, salt",
     pricePerWeight: {
-      "250": 149,
-      "500": 279,
-      "1000": 499
+      "100": 55,
+      "250": 119,
+      "500": 209,
+      "1000": 379,
     },
-    tagline: "Turn up the heat with every spoonful!"
+    stockPerWeight: {
+      "100": 10,
+      "250": 30,
+      "500": 30,
+      "1000": 30,
+    },
+    tagline: "Heat and flavor packed in every bite!",
   },
-  {
-    id: "18",
-    name: "Gongura Pickle",
-    image: "/gong.jpg",
-    category: "leafy",
-    type: "veg",
-    description: "Authentic Andhra gongura pickle with a signature tangy flavor.",
-    ingredients: "Gongura leaves, mustard oil, garlic, chili powder, spices",
-    pricePerWeight: {
-      "250": 159,
-      "500": 299,
-      "1000": 569
-    },
-    tagline: "The sour star of Andhra cuisine!"
-  }
 ].sort((a, b) => {
-  // Non-veg first (non-veg < veg)
+  // Step 1: non-veg first
   if (a.type === "non-veg" && b.type !== "non-veg") return -1;
   if (a.type !== "non-veg" && b.type === "non-veg") return 1;
-  return 0;
+
+  // Step 2: sort by price for 250g ascending
+  const priceA = a.pricePerWeight["250"];
+  const priceB = b.pricePerWeight["250"];
+  if (priceA < priceB) return -1;
+  if (priceA > priceB) return 1;
+
+  // Step 3: if price equal, sort by name alphabetically
+  return a.name.localeCompare(b.name);
 });

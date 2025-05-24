@@ -11,6 +11,7 @@ import { ShoppingCart, Minus, Plus, ChevronLeft, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/utils";
 import { products } from "@/data/products";
+import ProductList from "@/components/ProductList";  
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -207,6 +208,7 @@ const ProductDetailPage = () => {
             )}
           </div>
         </main>
+        
         <Footer />
       </div>
     </>

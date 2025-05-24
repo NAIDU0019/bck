@@ -1,9 +1,9 @@
-
 import Head from "@/components/Head";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import FeatureSection from "@/components/FeatureSection";
 import FeaturedProducts from "@/components/FeaturedProducts";
+// <-- import here
 import TestimonialSection from "@/components/TestimonialSection";
 import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
@@ -27,6 +27,7 @@ const Index = () => {
           <Hero />
           <FeatureSection />
           <FeaturedProducts />
+           {/* <-- added here */}
           <TestimonialSection />
           <NewsletterSection />
         </main>
