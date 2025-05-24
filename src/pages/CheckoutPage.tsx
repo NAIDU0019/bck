@@ -13,6 +13,8 @@ import { toast } from "@/components/ui/sonner";
 import { formatPrice } from "@/lib/utils";
 import RazorpayCheckout from "@/components/RazorpayCheckout";
 
+import { saveOrder } from '../lib/supabaseOrders';
+
 import {
   Form,
   FormControl,
@@ -157,6 +159,7 @@ const CheckoutPage = () => {
         </div>
       </>
     );
+
   }
 
   const onSubmit = (data: CheckoutFormValues) => {
@@ -168,12 +171,19 @@ const CheckoutPage = () => {
       setIsSubmitting(false);
     } 
     if (data.paymentMethod === "cod") {
-  fetch("/api/send-email", {
+      
+  fetch("http://localhost:5000/api/send-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       email: data.email,
       fullName: data.fullName,
+      address: data.address,
+    city: data.city,
+    state: data.state,
+    postalCode: data.postalCode,
+    phoneNumber: data.phoneNumber,
+    paymentMethod: data.paymentMethod,
       orderDetails: { items, total: finalTotal },
     }),
   })
@@ -206,6 +216,7 @@ else {
   const taxes = subtotal * TAX_RATE;
   const shippingCost = subtotal > 1000 ? 0 : 100;
   const finalTotal = subtotal + taxes + shippingCost + ADDITIONAL_FEES;
+
 
   return (
     <>
