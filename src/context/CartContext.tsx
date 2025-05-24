@@ -31,6 +31,7 @@ interface CartContextType {
   clearCart: () => void;
   itemCount: number;
   total: number;
+  updateItemQuantity: (productId: string, quantity: number) => void;
 }
 
 // Create context
@@ -92,6 +93,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  // Update item quantity
+  const updateItemQuantity = (productId: string, quantity: number) => {
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.product.id === productId ? { ...item, quantity } : item
+      )
+    );
+  };
+
   // Clear cart
   const clearCart = () => {
     setItems([]);
@@ -117,6 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         itemCount,
         total,
+        updateItemQuantity,
       }}
     >
       {children}
