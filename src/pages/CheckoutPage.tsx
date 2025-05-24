@@ -140,27 +140,7 @@ const CheckoutPage = () => {
     );
   }
 
-  if (!isSignedIn) {
-    return (
-      <>
-        <Head title="Please Login | ADHYAA PICKLES" />
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-24 text-center">
-            <h1 className="text-4xl font-bold mb-4">Please Login to Continue</h1>
-            <p className="mb-6">
-              You need to be logged in to place an order. Please login or create an account.
-            </p>
-            <Button onClick={() => navigate("/sign-up")} className="mr-4">
-              Go to Login
-            </Button>
-          </main>
-          <Footer />
-        </div>
-      </>
-    );
-
-  }
+  
 
   const onSubmit = (data: CheckoutFormValues) => {
     setIsSubmitting(true);
