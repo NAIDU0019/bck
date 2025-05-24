@@ -9,7 +9,7 @@ import AuthGuard from "@/components/AuthGuard";
 
 const CheckoutSuccessPage = () => {
   return (
-    <AuthGuard>
+    
       <>
         <Head 
           title="Order Confirmed - ADHYAA PICKLES"
@@ -61,7 +61,7 @@ const CheckoutSuccessPage = () => {
           <Footer />
         </div>
       </>
-    </AuthGuard>
+    
   );
 };
 
