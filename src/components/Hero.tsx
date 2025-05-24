@@ -1,30 +1,70 @@
 import { Button } from "@/components/ui/button";
+import { ShieldCheck, Truck, Star, ChevronRight } from "lucide-react";
 
 export default function Hero() {
   const whatsappNumber = "7995960659";
   const whatsappMessage = "Hi, I'd like to place an order for Adhyaa Pickles!";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
+  const bestSellers = [
+    "Andhra Mango Pickle",
+    "Garlic Chili Pickle",
+    "Lemon Pickle"
+  ];
+
   return (
-    <section className="hero-pattern py-16 md:py-24">
+    <section className="hero-pattern py-16 md:py-24 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-1/4 left-10 w-32 h-32 bg-pickle-100/30 rounded-full animate-float"></div>
+        <div className="absolute bottom-1/3 right-20 w-40 h-40 bg-spice-100/30 rounded-full animate-float animation-delay-2000"></div>
+      </div>
+
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
+          <div className="relative z-10">
+            <div className="mb-2 flex items-center gap-2 text-sm bg-amber-100 text-amber-900 w-max px-3 py-1 rounded-full">
+              <Star className="w-4 h-4 fill-amber-500" />
+              <span>Trusted by 5000+ Customers</span>
+            </div>
+
             <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 leading-tight">
-              Authentic Flavors, <br />
-              <span className="text-pickle-700">Traditional</span> <span className="text-spice-600">Recipes</span>
+              <span className="bg-gradient-to-r from-pickle-700 to-spice-600 bg-clip-text text-transparent">
+                Grandma's Secret
+              </span>
+              <br />
+              Pickle Recipes
             </h1>
+
             <p className="text-lg mb-8 max-w-xl text-muted-foreground">
-              Discover the perfect blend of spices and flavors with our premium range of vegetarian and non-vegetarian pickles, crafted with care and tradition.
+              Handcrafted with 100% natural ingredients using traditional methods passed down through generations. No preservatives, just authentic flavors.
             </p>
+
+            <div className="mb-8">
+              <h3 className="font-medium mb-2">Most Loved Varieties:</h3>
+              <div className="flex flex-wrap gap-2">
+                {bestSellers.map((item) => (
+                  <span key={item} className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 px-3 py-1 rounded-full text-sm border border-amber-200">
+                    {item} <ChevronRight className="w-4 h-4" />
+                  </span>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" asChild>
-                <a href="/products">Shop Now</a>
+              <Button size="lg" className="bg-gradient-to-r from-pickle-700 to-pickle-600 hover:from-pickle-800 hover:to-pickle-700 text-white shadow-lg" asChild>
+                <a href="/products">
+                  Shop Now
+                </a>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <a href="/about">Our Story</a>
+              
+              <Button size="lg" variant="outline" className="border-spice-500 text-spice-600 hover:bg-spice-50" asChild>
+                <a href="/about">
+                  Our Story
+                </a>
               </Button>
-              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white" asChild>
+              
+              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg" asChild>
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                   <span className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -35,17 +75,31 @@ export default function Hero() {
                 </a>
               </Button>
             </div>
-          </div>
-          <div className="relative">
-            <div className="relative z-10 rounded-lg overflow-hidden shadow-xl">
-              <img 
-                src="banner.jpeg"
-                alt="Assorted pickles in glass jars"
-                className="w-full h-full object-cover"
-              />
+
+            <div className="flex flex-wrap items-center gap-4 mt-6">
+              <div className="flex items-center gap-2 text-sm">
+                <ShieldCheck className="w-5 h-5 text-green-600" />
+                <span>100% Natural Ingredients</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Truck className="w-5 h-5 text-amber-600" />
+                <span>Free Shipping Pan India T&C Apply</span>
+              </div>
             </div>
-            <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-pickle-100 rounded-full -z-0 animate-float hidden md:block"></div>
-            <div className="absolute -top-6 -left-6 w-32 h-32 bg-spice-100 rounded-full -z-0 animate-float animation-delay-1000 hidden md:block"></div>
+          </div>
+
+          <div className="relative">
+            <div className="relative z-10 rounded-xl overflow-hidden shadow-2xl border-8 border-white">
+              <img 
+                src="/banner.jpeg"
+                alt="Assorted pickles in glass jars with fresh ingredients"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                loading="eager"
+              />
+              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full shadow-sm">
+                <span className="text-sm font-medium text-amber-900">Family Recipe Since 1995</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
