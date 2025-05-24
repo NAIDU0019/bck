@@ -324,7 +324,7 @@ export const products: Product[] = [
   {
     id: "17",
     name: "Red Chili Pickle",
-    image: "/redchilli.jpg",
+    image: "/rchelli.jpg",
     category: "vegetable",
     type: "veg",
     description: "Fiery red chili pickle for spice lovers who dare to challenge their taste buds.",
