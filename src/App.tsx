@@ -15,10 +15,9 @@ import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
 import NotFound from "./pages/NotFound";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import DashboardPage from "./pages/DashboardPage";
-import AuthPage from "./pages/AuthPage";
+import AuthPage from "./pages/AuthPage"; 
+// Assumes handles both /sign-in and /sign-up
 
-
-// Create a QueryClient instance for React Query
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -40,27 +39,26 @@ const App = () => {
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
 
-              {/* Protected Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <SignedIn>
-                    <DashboardPage />
-                  </SignedIn>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <SignedOut>
-                    <RedirectToSignIn />
-                  </SignedOut>
-                }
-              />
-
-              {/* Authentication Page */}
+              {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
+              <Route path="/sign-up/*" element={<AuthPage />} />
 
+              {/* Protected Route */}
+              <Route
+                path="/dashboard"
+                element={
+                  <>
+                    <SignedIn>
+                      <DashboardPage />
+                    </SignedIn>
+                    <SignedOut>
+                      <RedirectToSignIn />
+                    </SignedOut>
+                  </>
+                }
+              />
+
+              {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

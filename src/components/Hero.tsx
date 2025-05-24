@@ -26,7 +26,7 @@ export default function Hero() {
           <div className="relative">
             <div className="relative z-10 rounded-lg overflow-hidden shadow-xl">
               <img 
-                src="https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=800&q=80"
+                src="banner.jpeg"
                 alt="Assorted pickles in glass jars"
                 className="w-full h-full object-cover"
               />

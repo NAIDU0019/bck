@@ -2,7 +2,6 @@ import { useState } from "react";
 import Head from "@/components/Head";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import AuthGuard from "@/components/AuthGuard";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +23,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 
-// 🧠 Schema
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3),
   email: z.string().email(),
@@ -40,6 +39,7 @@ const checkoutFormSchema = z.object({
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
 const CheckoutPage = () => {
+  const { user, isSignedIn } = useUser();
   const { items, total: contextTotal } = useCart();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +60,53 @@ const CheckoutPage = () => {
     },
   });
 
+  // If cart is empty, show 404-like message
+  if (items.length === 0) {
+    return (
+      <>
+        <Head title="404 - Page Not Found | ADHYAA PICKLES" />
+        <div className="flex flex-col min-h-screen">
+          <Navbar />
+          <main className="flex-grow container mx-auto px-4 py-24 text-center">
+            <h1 className="text-4xl font-bold mb-4">Oops! Page not found</h1>
+            <p className="text-muted-foreground mb-6">
+              Looks like your cart is empty. Please add something before proceeding to checkout.
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button onClick={() => navigate("/")}>Go to Home</Button>
+              <Button variant="outline" onClick={() => navigate("/products")}>
+                Browse Products
+              </Button>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      </>
+    );
+  }
+
+  // If user is NOT logged in, show login prompt
+  if (!isSignedIn) {
+    return (
+      <>
+        <Head title="Please Login | ADHYAA PICKLES" />
+        <div className="flex flex-col min-h-screen">
+          <Navbar />
+          <main className="flex-grow container mx-auto px-4 py-24 text-center">
+            <h1 className="text-4xl font-bold mb-4">Please Login to Continue</h1>
+            <p className="mb-6">
+              You need to be logged in to place an order. Please login or create an account.
+            </p>
+            <Button onClick={() => navigate("/sign-in")}>
+              Go to Login
+            </Button>
+          </main>
+          <Footer />
+        </div>
+      </>
+    );
+  }
+
   const onSubmit = (data: CheckoutFormValues) => {
     setIsSubmitting(true);
 
@@ -77,25 +124,6 @@ const CheckoutPage = () => {
     }
   };
 
-  if (items.length === 0) {
-    return (
-      <>
-        <Head title="Checkout - ADHYAA PICKLES" />
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-16">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-              <Button onClick={() => navigate("/products")}>Browse Products</Button>
-            </div>
-          </main>
-          <Footer />
-        </div>
-      </>
-    );
-  }
-
-  // ✅ Corrected price computation based on selected weight
   const subtotal = items.reduce((acc, item) => {
     const unitPrice = item.product.pricePerWeight?.[item.weight] || 0;
     return acc + unitPrice * item.quantity;
@@ -105,7 +133,7 @@ const CheckoutPage = () => {
   const finalTotal = subtotal + shippingCost;
 
   return (
-    <AuthGuard>
+    <>
       <Head title="Checkout - ADHYAA PICKLES" />
       <div className="flex flex-col min-h-screen">
         <Navbar />
@@ -157,7 +185,7 @@ const CheckoutPage = () => {
               </div>
             </div>
 
-            {/* Form */}
+            {/* Checkout Form */}
             <div className="lg:col-span-2 order-1 lg:order-1">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -171,7 +199,9 @@ const CheckoutPage = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
-                            <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -182,7 +212,9 @@ const CheckoutPage = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Email</FormLabel>
-                            <FormControl><Input placeholder="email@example.com" {...field} /></FormControl>
+                            <FormControl>
+                              <Input placeholder="email@example.com" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -195,7 +227,9 @@ const CheckoutPage = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Address</FormLabel>
-                          <FormControl><Input placeholder="Street Address" {...field} /></FormControl>
+                          <FormControl>
+                            <Input placeholder="Street Address" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -208,7 +242,9 @@ const CheckoutPage = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>City</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -219,7 +255,9 @@ const CheckoutPage = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>State</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -230,7 +268,9 @@ const CheckoutPage = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Postal Code</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -243,7 +283,9 @@ const CheckoutPage = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -260,7 +302,11 @@ const CheckoutPage = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-2">
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="space-y-2"
+                            >
                               <div className="flex items-center space-x-2 border p-4 rounded-md">
                                 <RadioGroupItem value="razorpay" id="razorpay" />
                                 <Label htmlFor="razorpay" className="cursor-pointer flex-grow">
@@ -295,7 +341,7 @@ const CheckoutPage = () => {
         </main>
         <Footer />
       </div>
-    </AuthGuard>
+    </>
   );
 };
 

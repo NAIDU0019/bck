@@ -2,7 +2,7 @@ export const products: Product[] = [
   {
     id: "1",
     name: "Mango Pickle",
-    image: "https://images.unsplash.com/photo-1626078272482-3591cb7b0290?auto=format&fit=crop&w=800&q=80",
+    image: "/mango.jpeg",
     category: "fruit",
     type: "veg",
     description: "A tangy and spicy pickle made with raw mangoes, mustard oil, and a blend of aromatic spices.",
@@ -17,7 +17,7 @@ export const products: Product[] = [
   {
     id: "2",
     name: "Lemon Pickle",
-    image: "https://images.unsplash.com/photo-1568909344668-6f14a07b56a0?auto=format&fit=crop&w=800&q=80",
+    image: "/lemon.jpg",
     category: "fruit",
     type: "veg",
     description: "A zingy and refreshing pickle made with fresh lemons and spices.",
@@ -32,7 +32,7 @@ export const products: Product[] = [
   {
     id: "3",
     name: "Mixed Vegetable Pickle",
-    image: "https://images.unsplash.com/photo-1589135233689-8345c5e45677?auto=format&fit=crop&w=800&q=80",
+    image: "/mixveg.jpg",
     category: "vegetable",
     type: "veg",
     description: "A colorful medley of vegetables pickled with our special blend.",
@@ -47,7 +47,7 @@ export const products: Product[] = [
   {
     id: "4",
     name: "Garlic Pickle",
-    image: "https://images.unsplash.com/photo-1564894809611-1742fc40ed80?auto=format&fit=crop&w=800&q=80",
+    image: "/garlic.jpg",
     category: "vegetable",
     type: "veg",
     description: "Garlic pickle that adds bold flavor to any meal.",
@@ -62,7 +62,7 @@ export const products: Product[] = [
   {
     id: "5",
     name: "Chicken Pickle",
-    image: "https://images.unsplash.com/photo-1588168333986-5078d3ae3976?auto=format&fit=crop&w=800&q=80",
+    image: "/chicken.jpeg",
     category: "non-veg",
     type: "non-veg",
     description: "Spicy and flavorful chicken pickle made with authentic Andhra spices.",
@@ -77,7 +77,7 @@ export const products: Product[] = [
   {
     id: "6",
     name: "Fish Pickle",
-    image: "https://images.unsplash.com/photo-1544733422-251e532ca221?auto=format&fit=crop&w=800&q=80",
+    image: "/fish.jpg",
     category: "non-veg",
     type: "non-veg",
     description: "Tangy and spicy fish pickle preserved in mustard oil.",
@@ -92,7 +92,7 @@ export const products: Product[] = [
   {
     id: "7",
     name: "Green Chili Pickle",
-    image: "https://images.unsplash.com/photo-1575396565298-4304edfac24d?auto=format&fit=crop&w=800&q=80",
+    image: "/gchilli.jpg",
     category: "vegetable",
     type: "veg",
     description: "Fiery green chili pickle made with mustard oil and aromatic spices.",
@@ -107,7 +107,7 @@ export const products: Product[] = [
   {
     id: "8",
     name: "Prawn Pickle",
-    image: "https://images.unsplash.com/photo-1510130387422-82bed34b37e9?auto=format&fit=crop&w=800&q=80",
+    image: "/prawns.jpg",
     category: "non-veg",
     type: "non-veg",
     description: "Juicy prawns cooked and preserved in traditional pickle masala.",
@@ -122,7 +122,7 @@ export const products: Product[] = [
   {
     id: "9",
     name: "Ginger Pickle",
-    image: "https://images.unsplash.com/photo-1590596388567-abe52a385438?auto=format&fit=crop&w=800&q=80",
+    image: "/ginger.jpg",
     category: "vegetable",
     type: "veg",
     description: "Zesty ginger pickle great for digestion and flavor enhancement.",
@@ -137,7 +137,7 @@ export const products: Product[] = [
   {
     id: "10",
     name: "Mutton Pickle",
-    image: "https://images.unsplash.com/photo-1574653853027-5382a3d23a7d?auto=format&fit=crop&w=800&q=80",
+    image: "/mutton.jpeg",
     category: "non-veg",
     type: "non-veg",
     description: "Slow-cooked tender mutton with bold spices.",
@@ -150,39 +150,9 @@ export const products: Product[] = [
     tagline: "Bold, rich and meaty – the perfect indulgence!"
   },
   {
-    id: "11",
-    name: "Carrot Pickle",
-    image: "https://images.unsplash.com/photo-1522676345068-e97eeb9c900d?auto=format&fit=crop&w=800&q=80",
-    category: "vegetable",
-    type: "veg",
-    description: "Sweet and tangy carrot pickle preserved in vinegar.",
-    ingredients: "Carrots, mustard oil, sugar, vinegar, spices",
-    pricePerWeight: {
-      "250": 109,
-      "500": 189,
-      "1000": 339
-    },
-    tagline: "A sweet crunch wrapped in spicy love!"
-  },
-  {
-    id: "12",
-    name: "Jackfruit Pickle",
-    image: "https://images.unsplash.com/photo-1591981093714-e5bdee889a82?auto=format&fit=crop&w=800&q=80",
-    category: "fruit",
-    type: "veg",
-    description: "Tender jackfruit pickle with authentic Andhra spices.",
-    ingredients: "Raw jackfruit, mustard oil, chili, turmeric, fenugreek",
-    pricePerWeight: {
-      "250": 129,
-      "500": 239,
-      "1000": 449
-    },
-    tagline: "Chunky, spicy, and totally jack-fruity!"
-  },
-  {
     id: "13",
     name: "Crab Pickle",
-    image: "https://images.unsplash.com/photo-1600431521340-491eca880813?auto=format&fit=crop&w=800&q=80",
+    image: "/crab.jpg",
     category: "seafood",
     type: "non-veg",
     description: "Rich and spicy crab pickle that delivers coastal flavor with every bite.",
@@ -197,7 +167,7 @@ export const products: Product[] = [
   {
     id: "14",
     name: "Gongura Chicken Pickle",
-    image: "https://images.unsplash.com/photo-1611186871348-202f35bfa6b1?auto=format&fit=crop&w=800&q=80",
+    image: "/gchicken.jpg",
     category: "meat",
     type: "non-veg",
     description: "A fiery fusion of tangy gongura leaves and succulent chicken pieces.",
@@ -212,7 +182,7 @@ export const products: Product[] = [
   {
     id: "15",
     name: "Dry Mango Pickle",
-    image: "https://images.unsplash.com/photo-1599246755824-3a9dc689d1ee?auto=format&fit=crop&w=800&q=80",
+    image: "/dmango.jpeg",
     category: "fruit",
     type: "veg",
     description: "Traditional sun-dried mango pickle infused with bold Indian spices.",
@@ -227,7 +197,7 @@ export const products: Product[] = [
   {
     id: "16",
     name: "Tomato Pickle",
-    image: "https://images.unsplash.com/photo-1590086782809-4304dbb5ac8f?auto=format&fit=crop&w=800&q=80",
+    image: "/tomato.jpg",
     category: "vegetable",
     type: "veg",
     description: "Juicy tomato pickle packed with Andhra-style flavors and fiery tang.",
@@ -242,7 +212,7 @@ export const products: Product[] = [
   {
     id: "17",
     name: "Red Chilli Pickle",
-    image: "https://images.unsplash.com/photo-1622930497177-e36f6c44e212?auto=format&fit=crop&w=800&q=80",
+    image: "/rchelli.jpg",
     category: "spice",
     type: "veg",
     description: "Hot and intense red chilli pickle for spice lovers.",
@@ -257,7 +227,7 @@ export const products: Product[] = [
   {
     id: "18",
     name: "Gongura Pickle",
-    image: "https://images.unsplash.com/photo-1656171352071-743b6b4a7770?auto=format&fit=crop&w=800&q=80",
+    image: "/gong.jpg",
     category: "leafy",
     type: "veg",
     description: "Authentic Andhra gongura pickle with a signature tangy flavor.",
