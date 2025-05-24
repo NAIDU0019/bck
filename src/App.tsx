@@ -15,8 +15,13 @@ import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
 import NotFound from "./pages/NotFound";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import DashboardPage from "./pages/DashboardPage";
-import AuthPage from "./pages/AuthPage"; 
-// Assumes handles both /sign-in and /sign-up
+import AuthPage from "./pages/AuthPage";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import ReturnPolicy from "./pages/ReturnPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import FAQ from "./pages/FAQ";
+
 
 const queryClient = new QueryClient();
 
@@ -38,6 +43,11 @@ const App = () => {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/faq" element={<FAQ />} />
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />

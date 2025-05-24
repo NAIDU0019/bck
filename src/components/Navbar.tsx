@@ -1,30 +1,22 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ShoppingCart,
-  Menu,
-  X,
-  Search
-} from "lucide-react";
+import { ShoppingCart, Menu, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "@/components/CartDrawer";
 import { useAuth } from "@clerk/clerk-react";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { itemCount } = useCart();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
-  };
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleCart = () => setIsCartOpen(!isCartOpen);
 
-  const toggleCart = () => {
-    setIsCartOpen(!isCartOpen);
-  };
+  const closeMenu = () => setIsMenuOpen(false);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -39,17 +31,36 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-foreground hover:text-pickle-600 font-medium">Home</Link>
-            <Link to="/products" className="text-foreground hover:text-pickle-600 font-medium">Shop</Link>
-            <Link to="/about" className="text-foreground hover:text-pickle-600 font-medium">Our Story</Link>
-            <Link to="/contact" className="text-foreground hover:text-pickle-600 font-medium">Contact</Link>
+            {["/", "/products", "/about", "/contact"].map((path, idx) => {
+              const labels = ["Home", "Shop", "Our Story", "Contact"];
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  className="text-foreground hover:text-pickle-600 font-medium"
+                  onClick={closeMenu}
+                >
+                  {labels[idx]}
+                </Link>
+              );
+            })}
 
             {isSignedIn ? (
-              <Link to="/dashboard" className="text-foreground hover:text-pickle-600 font-medium">Dashboard</Link>
+              <Link
+                to="/dashboard"
+                className="text-foreground hover:text-pickle-600 font-medium"
+                onClick={closeMenu}
+              >
+                Dashboard
+              </Link>
             ) : (
               <>
-                <Button variant="outline" onClick={() => navigate("/sign-in")}>Sign In</Button>
-                <Button variant="outline" onClick={() => navigate("/sign-up")}>Sign Up</Button>
+                <Button variant="outline" onClick={() => navigate("/sign-in")}>
+                  Sign In
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/sign-up")}>
+                  Sign Up
+                </Button>
               </>
             )}
           </div>
@@ -92,31 +103,67 @@ export default function Navbar() {
                 </span>
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={toggleMenu} aria-label="Menu">
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMenu}
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && (
-          <div className="md:hidden mt-4 pb-4 bg-white">
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 pb-4 bg-white" role="menu" aria-label="Mobile Navigation">
             <div className="flex flex-col space-y-4">
-              <Link to="/" className="text-foreground hover:text-pickle-600 py-2 font-medium" onClick={() => setIsOpen(false)}>Home</Link>
-              <Link to="/products" className="text-foreground hover:text-pickle-600 py-2 font-medium" onClick={() => setIsOpen(false)}>Shop</Link>
-              <Link to="/about" className="text-foreground hover:text-pickle-600 py-2 font-medium" onClick={() => setIsOpen(false)}>Our Story</Link>
-              <Link to="/contact" className="text-foreground hover:text-pickle-600 py-2 font-medium" onClick={() => setIsOpen(false)}>Contact</Link>
+              {["/", "/products", "/about", "/contact"].map((path, idx) => {
+                const labels = ["Home", "Shop", "Our Story", "Contact"];
+                return (
+                  <Link
+                    key={path}
+                    to={path}
+                    className="text-foreground hover:text-pickle-600 py-2 font-medium"
+                    onClick={closeMenu}
+                    role="menuitem"
+                  >
+                    {labels[idx]}
+                  </Link>
+                );
+              })}
 
               {isSignedIn ? (
-                <Link to="/dashboard" className="text-foreground hover:text-pickle-600 py-2 font-medium" onClick={() => setIsOpen(false)}>
+                <Link
+                  to="/dashboard"
+                  className="text-foreground hover:text-pickle-600 py-2 font-medium"
+                  onClick={closeMenu}
+                  role="menuitem"
+                >
                   Dashboard
                 </Link>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => { setIsOpen(false); navigate("/sign-in"); }} className="w-full mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      closeMenu();
+                      navigate("/sign-in");
+                    }}
+                    className="w-full mt-2"
+                  >
                     Sign In
                   </Button>
-                  <Button variant="outline" onClick={() => { setIsOpen(false); navigate("/sign-up"); }} className="w-full mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      closeMenu();
+                      navigate("/sign-up");
+                    }}
+                    className="w-full mt-2"
+                  >
                     Sign Up
                   </Button>
                 </>
@@ -132,6 +179,7 @@ export default function Navbar() {
         )}
       </div>
 
+      {/* Cart Drawer */}
       <CartDrawer open={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </nav>
   );

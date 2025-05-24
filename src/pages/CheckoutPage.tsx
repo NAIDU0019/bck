@@ -97,7 +97,7 @@ const CheckoutPage = () => {
             <p className="mb-6">
               You need to be logged in to place an order. Please login or create an account.
             </p>
-            <Button onClick={() => navigate("/sign-in")}>
+            <Button onClick={() => navigate("/sign-up")} className="mr-4">
               Go to Login
             </Button>
           </main>

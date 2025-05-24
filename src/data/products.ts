@@ -239,4 +239,9 @@ export const products: Product[] = [
     },
     tagline: "The sour star of Andhra cuisine!"
   }
-];
+].sort((a, b) => {
+  // Non-veg first (non-veg < veg)
+  if (a.type === "non-veg" && b.type !== "non-veg") return -1;
+  if (a.type !== "non-veg" && b.type === "non-veg") return 1;
+  return 0;
+});

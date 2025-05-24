@@ -66,22 +66,22 @@ export default function Footer() {
             <h3 className="font-display font-semibold mb-4">Information</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/shipping" className="text-muted-foreground hover:text-foreground">
+                <Link to="/shipping-policy" className="text-muted-foreground hover:text-foreground">
                   Shipping Policy
                 </Link>
               </li>
               <li>
-                <Link to="/returns" className="text-muted-foreground hover:text-foreground">
+                <Link to="/return-policy" className="text-muted-foreground hover:text-foreground">
                   Return Policy
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-foreground">
+                <Link to="/terms-and-conditions" className="text-muted-foreground hover:text-foreground">
                   Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-foreground">
+                <Link to="/privacy-policy" className="text-muted-foreground hover:text-foreground">
                   Privacy Policy
                 </Link>
               </li>
