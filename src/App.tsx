@@ -21,6 +21,7 @@ import ReturnPolicy from "./pages/ReturnPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import FAQ from "./pages/FAQ";
+import AdminDashboard from './pages/AdminDashboard';
 
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
+              <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/product/:id" element={<ProductDetailPage />} />
               <Route path="/about" element={<AboutPage />} />

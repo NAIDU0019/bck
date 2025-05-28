@@ -1,5 +1,0 @@
-
-project_id = "kwewngssolzrlwgvqknv"
-
-[functions.create-order]
-verify_jwt = true

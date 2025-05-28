@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, Truck, Star, ChevronRight } from "lucide-react";
 
 export default function Hero() {
-  const whatsappNumber = "7995960659";
+  const whatsappNumber = "7995059659";
   const whatsappMessage = "Hi, I'd like to place an order for Adhyaa Pickles!";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
