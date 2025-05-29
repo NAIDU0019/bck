@@ -8,8 +8,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "917995059659";
-
 const CheckoutSuccessPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,9 +15,7 @@ const CheckoutSuccessPage = () => {
   const { clearCart } = useCart();
 
   const hasCartBeenCleared = useRef(false);
-  const whatsappRedirectInitiated = useRef(false);
-
-  const [countdown, setCountdown] = useState(5); // Seconds before redirect
+  const [countdown, setCountdown] = useState(30); // 30 seconds before redirect
 
   useEffect(() => {
     if (customerInfo && orderedItems && orderTotal && !hasCartBeenCleared.current) {
@@ -27,61 +23,18 @@ const CheckoutSuccessPage = () => {
       hasCartBeenCleared.current = true;
     }
 
-    if (customerInfo && orderedItems && orderTotal && !whatsappRedirectInitiated.current) {
-      whatsappRedirectInitiated.current = true;
-
-      const timerInterval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === 1) {
-            clearInterval(timerInterval);
-            redirectToWhatsApp();
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timerInterval);
-    }
-  }, [customerInfo, orderedItems, orderTotal]);
-
-  const redirectToWhatsApp = () => {
-    const orderSummary = orderedItems
-      .map(
-        (item: any) =>
-          `- ${item.product.name} (${item.weight}g) x ${item.quantity} = ${formatPrice(item.product.pricePerWeight?.[item.weight] * item.quantity)}`
-      )
-      .join("\n");
-
-    const message = encodeURIComponent(
-      `Hello ADHYAA PICKLES, I just placed an order with the following details for faster processing:\n\n` +
-        `*Customer Name:* ${customerInfo.fullName}\n` +
-        `*Email:* ${customerInfo.email}\n` +
-        `*Phone:* ${customerInfo.phoneNumber}\n` +
-        `*Shipping Address:* ${customerInfo.address}, ${customerInfo.city}, ${customerInfo.state} - ${customerInfo.postalCode}\n` +
-        `*Payment Method:* ${customerInfo.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment (Razorpay)"}\n\n` +
-        `*Order Summary:*\n${orderSummary}\n\n` +
-        `*Total Amount:* ${formatPrice(orderTotal)}\n\n` +
-        `Looking forward to receiving my delicious pickles!`
-    );
-
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-    window.location.href = whatsappUrl;
-  };
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && whatsappRedirectInitiated.current) {
-        setTimeout(() => {
+    const timerInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === 1) {
+          clearInterval(timerInterval);
           navigate("/");
-        }, 500);
-      }
-    };
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [navigate]);
+    return () => clearInterval(timerInterval);
+  }, [customerInfo, orderedItems, orderTotal, navigate]);
 
   return (
     <>
@@ -132,20 +85,11 @@ const CheckoutSuccessPage = () => {
                   </ul>
                 </div>
 
-                <p className="text-orange-600 font-semibold mb-4">
-                  **Redirecting you to WhatsApp in {countdown} second{countdown !== 1 && "s"} for faster order processing...**
+                <p className="text-blue-600 font-semibold mb-4">
+                  You will be redirected to the home page in {countdown} second{countdown !== 1 && "s"}.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-2">
-                  <Button asChild>
-                    <a
-                      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello ADHYAA PICKLES, I just placed an order. My name is ${customerInfo.fullName} and my total order amount is ${formatPrice(orderTotal)}. Please find my complete order details in the previous automatically sent message or in my email. Thank you!`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Send Details via WhatsApp
-                    </a>
-                  </Button>
                   <Button asChild>
                     <Link to="/products">Continue Shopping</Link>
                   </Button>
