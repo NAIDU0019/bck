@@ -7,12 +7,19 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { Separator } from "@/components/ui/separator"; // Only keep if actually used elsewhere
-import { toast } from "sonner"; // Changed from "@/components/ui/sonner" assuming it's the external library
+import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, Search, Filter } from "lucide-react"; // Removed CheckCircle, XCircle if not directly used
+import { Loader2, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import io from 'socket.io-client'; // Import socket.io-client
+import io from 'socket.io-client';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 // Define the structure of an order as it comes from your backend/Supabase
 interface Order {
@@ -26,6 +33,8 @@ interface Order {
     state: string;
     postalCode: string;
     phoneNumber: string;
+    // Add deliveryNotes here if you store them in customer_info
+    // deliveryNotes?: string;
   };
   ordered_items: Array<{
     product: {
@@ -50,19 +59,20 @@ interface Order {
     code: string;
     discountPercent: number;
   };
-  order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'; // Added 'refunded'
   created_at: string;
   updated_at: string;
+  // Add an optional field for order history if your backend provides it
+  // history?: Array<{ status: Order['order_status']; timestamp: string; changedBy?: string }>;
 }
 
 const ADMIN_API_KEY_STORAGE_KEY = 'adhyaa_admin_api_key';
 
 export default function AdminDashboard() {
-  // Initialize isAuthenticated based on localStorage
   const initialAdminKey = localStorage.getItem(ADMIN_API_KEY_STORAGE_KEY) || '';
   const [adminKey, setAdminKey] = useState<string>(initialAdminKey);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!initialAdminKey); // Correctly sets initial auth state
-  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!initialAdminKey);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,25 +80,33 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // Use import.meta.env for Vite projects
+  // State for Order Details Modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false); // For single order status update
+  const [isRefunding, setIsRefunding] = useState<boolean>(false); // For refund action
+  const [isCancelling, setIsCancelling] = useState<boolean>(false); // For cancel action
+
+  // State for Bulk Actions
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false); // For all bulk status updates
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-  // Handle admin logout (defined here so it can be called by fetchOrders)
+  // Handle admin logout
   const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
     setAdminKey('');
     setOrders([]);
     localStorage.removeItem(ADMIN_API_KEY_STORAGE_KEY);
     toast.info('Logged out from admin dashboard.');
-  }, []); // No dependencies for this simple logout function
+  }, []);
 
   // Memoized function to fetch orders from the backend
   const fetchOrders = useCallback(async () => {
-    // Only attempt to fetch orders if authenticated
     if (!isAuthenticated) {
-        setOrders([]); // Clear orders if not authenticated
-        setLoading(false); // Ensure loading is false if not authenticated
-        return;
+      setOrders([]);
+      setLoading(false);
+      return;
     }
 
     setLoading(true);
@@ -110,79 +128,76 @@ export default function AdminDashboard() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        // If 401 Unauthorized, specifically handle it as a login failure
         if (response.status === 401) {
-            toast.error('Session expired or Invalid Admin API Key. Please log in again.');
-            handleLogout(); // Log out if unauthorized
-            return; // Exit function early
+          toast.error('Session expired or Invalid Admin API Key. Please log in again.');
+          handleLogout();
+          return;
         }
         throw new Error(errorData.message || 'Failed to fetch orders.');
       }
 
       const data: Order[] = await response.json();
-      console.log("Fetched Orders Data:", JSON.stringify(data, null, 2)); // <<-- IMPORTANT DEBUG LOG
+      console.log("Fetched Orders Data:", JSON.stringify(data, null, 2));
       setOrders(data);
     } catch (err: any) {
-      console.error("Error fetching orders:", err); // Log the actual error
+      console.error("Error fetching orders:", err);
       setError(err.message || 'An unexpected error occurred while fetching orders.');
       toast.error(err.message || 'Failed to load orders.');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, filterStatus, searchTerm, adminKey, backendUrl, handleLogout]); // Include handleLogout as dependency
+  }, [isAuthenticated, filterStatus, searchTerm, adminKey, backendUrl, handleLogout]);
 
   // --- Main useEffect for initial fetch and WebSocket listener ---
   useEffect(() => {
-    // Initial fetch when authenticated or filters/search change
     fetchOrders();
 
-    // Setup WebSocket connection only if authenticated
     let socket: ReturnType<typeof io> | undefined;
     if (isAuthenticated) {
-        console.log(`Attempting to connect to WebSocket at: ${backendUrl}`);
-        socket = io(backendUrl); // Connect to your backend's WebSocket server
+      console.log(`Attempting to connect to WebSocket at: ${backendUrl}`);
+      socket = io(backendUrl);
 
-        socket.on('connect', () => {
-            console.log('Connected to WebSocket server');
-        });
+      socket.on('connect', () => {
+        console.log('Connected to WebSocket server');
+      });
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from WebSocket server');
-        });
+      socket.on('disconnect', () => {
+        console.log('Disconnected from WebSocket server');
+      });
 
-        socket.on('connect_error', (err) => {
-            console.error('WebSocket connection error:', err.message);
-            toast.error('Failed to connect to real-time updates. Check backend.');
-        });
+      socket.on('connect_error', (err) => {
+        console.error('WebSocket connection error:', err.message);
+        toast.error('Failed to connect to real-time updates. Check backend.');
+      });
 
-        // Listen for 'newOrder' event from the backend
-        socket.on('newOrder', (newOrder: Order) => {
-            console.log('New order received via WebSocket:', newOrder);
-            // Add the new order to the beginning of the list
-            setOrders((prevOrders) => [newOrder, ...prevOrders]);
-            toast.success(`🎉 New Order! #${newOrder.order_id}`); // Sonner toast for new order
-        });
+      socket.on('newOrder', (newOrder: Order) => {
+        console.log('New order received via WebSocket:', newOrder);
+        setOrders((prevOrders) => [newOrder, ...prevOrders]);
+        toast.success(`🎉 New Order! #${newOrder.order_id}`);
+      });
 
-        // Optional: Listen for 'orderUpdated' if your backend emits it on status changes
-        socket.on('orderUpdated', (updatedOrder: Order) => {
-            console.log('Order updated via WebSocket:', updatedOrder);
-            setOrders((prevOrders) =>
-                prevOrders.map((order) =>
-                    order.id === updatedOrder.id ? updatedOrder : order
-                )
-            );
-            toast.info(`Order #${updatedOrder.order_id} status changed to ${updatedOrder.order_status}`);
-        });
+      socket.on('orderUpdated', (updatedOrder: Order) => {
+        console.log('Order updated via WebSocket:', updatedOrder);
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === updatedOrder.id ? updatedOrder : order
+          )
+        );
+        toast.info(`Order #${updatedOrder.order_id} status changed to ${updatedOrder.order_status}`);
+        // If the updated order is the one currently in the modal, update it
+        if (selectedOrder && selectedOrder.id === updatedOrder.id) {
+          setSelectedOrder(updatedOrder);
+        }
+      });
     }
 
-    // Cleanup function for WebSocket
     return () => {
       if (socket) {
         console.log('Disconnecting from WebSocket server...');
         socket.disconnect();
       }
     };
-  }, [isAuthenticated, fetchOrders, backendUrl]); // Dependencies for useEffect
+  }, [isAuthenticated, fetchOrders, backendUrl, selectedOrder]);
 
   // Handle admin login
   const handleLogin = async () => {
@@ -194,7 +209,6 @@ export default function AdminDashboard() {
 
     setLoading(true);
     try {
-      // A simple way to test the key is to try fetching orders
       const response = await fetch(`${backendUrl}/api/admin/orders`, {
         headers: {
           'X-Admin-API-Key': adminKey,
@@ -209,9 +223,8 @@ export default function AdminDashboard() {
       localStorage.setItem(ADMIN_API_KEY_STORAGE_KEY, adminKey);
       setIsAuthenticated(true);
       toast.success('Admin login successful!');
-      // fetchOrders will be called by the useEffect hook due to isAuthenticated change
     } catch (err: any) {
-      console.error("Login error:", err); // Log login error
+      console.error("Login error:", err);
       setLoginError(err.message || 'Login failed. Please check your API Key.');
       toast.error(err.message || 'Admin login failed.');
       setIsAuthenticated(false);
@@ -221,9 +234,9 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle order status update
+  // Handle single order status update
   const handleUpdateStatus = async (orderId: string, newStatus: Order['order_status']) => {
-    setLoading(true);
+    setIsUpdatingStatus(true);
     setError(null);
     try {
       const response = await fetch(`${backendUrl}/api/admin/orders/${orderId}`, {
@@ -241,20 +254,255 @@ export default function AdminDashboard() {
       }
 
       const updatedOrder = await response.json();
-      // Optimistic UI update or re-fetch for immediate consistency
-      // Note: If you also emit 'orderUpdated' from backend, this might lead to duplicate updates.
-      // You might want to remove this if you rely solely on WebSocket updates for status changes.
       setOrders(prevOrders =>
         prevOrders.map(order => (order.id === orderId ? { ...order, order_status: newStatus } : order))
       );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, order_status: newStatus } : null);
+      }
       toast.success(`Order ${updatedOrder.order.order_id} status updated to ${newStatus}!`);
     } catch (err: any) {
-      console.error("Error updating status:", err); // Log the actual error
+      console.error("Error updating status:", err);
       setError(err.message || 'An unexpected error occurred while updating status.');
       toast.error(err.message || 'Failed to update order status.');
     } finally {
-      setLoading(false);
+      setIsUpdatingStatus(false);
     }
+  };
+
+  // Handle refund for a single order
+  const handleRefund = async (orderId: string, paymentId: string, totalAmount: number) => {
+    if (!paymentId) {
+      toast.error("Cannot refund: No payment ID found for this order.");
+      return;
+    }
+    const amountInPaisa = Math.round(totalAmount * 100);
+
+    if (!confirm(`Are you sure you want to initiate a full refund of ${formatPrice(totalAmount)} for this order? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsRefunding(true);
+    try {
+      // THIS ENDPOINT MUST BE IMPLEMENTED ON YOUR BACKEND
+      const response = await fetch(`${backendUrl}/api/admin/orders/${orderId}/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': adminKey,
+        },
+        body: JSON.stringify({ amount: amountInPaisa, paymentId: paymentId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Refund failed.');
+      }
+
+      toast.success(`Refund of ${formatPrice(totalAmount)} initiated successfully for Order #${selectedOrder?.order_id || orderId}!`);
+      fetchOrders();
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, order_status: 'refunded' } : null);
+      }
+
+    } catch (err: any) {
+      console.error("Refund error:", err);
+      toast.error(err.message || 'An error occurred during refund.');
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
+  // Handle order cancellation
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm(`Are you sure you want to cancel Order #${selectedOrder?.order_id || orderId}? This will mark it as cancelled.`)) {
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      // THIS ENDPOINT MUST BE IMPLEMENTED ON YOUR BACKEND
+      const response = await fetch(`${backendUrl}/api/admin/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': adminKey,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Order cancellation failed.');
+      }
+
+      toast.success(`Order #${selectedOrder?.order_id || orderId} has been cancelled successfully.`);
+      setOrders(prevOrders =>
+        prevOrders.map(order => (order.id === orderId ? { ...order, order_status: 'cancelled' } : order))
+      );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, order_status: 'cancelled' } : null);
+      }
+    } catch (err: any) {
+      console.error("Cancellation error:", err);
+      toast.error(err.message || 'An error occurred during cancellation.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // --- Bulk Actions Logic ---
+  const handleSelectOrder = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllOrders = () => {
+    if (selectedOrderIds.size === orders.length && orders.length > 0) {
+      setSelectedOrderIds(new Set()); // Deselect all
+    } else {
+      setSelectedOrderIds(new Set(orders.map(order => order.id))); // Select all
+    }
+  };
+
+  // Generic bulk status update function
+  const handleBulkUpdateStatus = async (newStatus: Order['order_status']) => {
+    if (selectedOrderIds.size === 0) {
+      toast.info("No orders selected for bulk update.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to update status of ${selectedOrderIds.size} orders to "${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}"?`)) {
+      return;
+    }
+
+    setIsBulkProcessing(true); // Set loading for all bulk actions
+    setError(null);
+    const updates: Promise<any>[] = [];
+    const failedOrderIds: string[] = [];
+
+    // Optimistically update the UI
+    setOrders(prevOrders => prevOrders.map(order =>
+      selectedOrderIds.has(order.id) ? { ...order, order_status: newStatus } : order
+    ));
+
+    for (const orderId of Array.from(selectedOrderIds)) {
+      updates.push(
+        fetch(`${backendUrl}/api/admin/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-API-Key': adminKey,
+          },
+          body: JSON.stringify({ newStatus }),
+        })
+          .then(response => {
+            if (!response.ok) {
+              failedOrderIds.push(orderId);
+              return response.json().then(err => Promise.reject(err.message || `Failed to update ${orderId}`));
+            }
+            return response.json();
+          })
+          .catch(err => {
+            console.error(`Error updating order ${orderId}:`, err);
+            failedOrderIds.push(orderId);
+            return Promise.resolve(); // Don't block Promise.all
+          })
+      );
+    }
+
+    await Promise.all(updates);
+
+    if (failedOrderIds.length === 0) {
+      toast.success(`${selectedOrderIds.size} orders updated to "${newStatus}" successfully!`);
+    } else {
+      toast.warning(`Updated ${selectedOrderIds.size - failedOrderIds.length} orders. Failed to update ${failedOrderIds.length} orders.`);
+      fetchOrders(); // Re-fetch orders to ensure consistency after partial failure
+    }
+    setSelectedOrderIds(new Set()); // Clear selection after action
+    setIsBulkProcessing(false);
+  };
+
+  const handleBulkPrint = () => {
+    if (selectedOrderIds.size === 0) {
+      toast.info("No orders selected for printing.");
+      return;
+    }
+    toast.info("Bulk print functionality is not fully implemented yet. Please print individually from order details.");
+  };
+
+  const handleBulkExport = () => {
+    if (selectedOrderIds.size === 0) {
+      toast.info("No orders selected for export.");
+      return;
+    }
+
+    const ordersToExport = orders.filter(order => selectedOrderIds.has(order.id));
+
+    if (ordersToExport.length === 0) {
+      toast.info("No orders found to export based on current selection.");
+      return;
+    }
+
+    const headers = [
+      "OrderID", "CustomOrderID", "CustomerName", "CustomerEmail", "CustomerPhone",
+      "Address", "City", "State", "PostalCode", "TotalAmount", "PaymentMethod",
+      "PaymentID", "OrderStatus", "CreatedAt", "ItemsDetails", "Subtotal", "Discount",
+      "Taxes", "ShippingCost", "AdditionalFees"
+    ];
+
+    const csvRows = ordersToExport.map(order => {
+      const customerInfo = order.customer_info;
+      const itemDetails = order.ordered_items ?
+        order.ordered_items.map(item =>
+          `${item.product?.name || 'N/A'} (${item.weight || 'N/A'}g) x ${item.quantity || 0}`
+        ).join('; ') : 'N/A';
+
+      return [
+        `"${order.id}"`,
+        `"${order.order_id}"`,
+        `"${customerInfo.fullName}"`,
+        `"${customerInfo.email}"`,
+        `"${customerInfo.phoneNumber}"`,
+        `"${customerInfo.address}, ${customerInfo.city}, ${customerInfo.state} - ${customerInfo.postalCode}"`,
+        `"${customerInfo.city}"`,
+        `"${customerInfo.state}"`,
+        `"${customerInfo.postalCode}"`,
+        order.total_amount,
+        `"${order.payment_method}"`,
+        `"${order.payment_id || ''}"`,
+        `"${order.order_status}"`,
+        `"${new Date(order.created_at).toISOString()}"`,
+        `"${itemDetails}"`,
+        order.subtotal,
+        order.discount_amount,
+        order.taxes,
+        order.shipping_cost,
+        order.additional_fees,
+      ].map(field => typeof field === 'string' ? `"${field.replace(/"/g, '""')}"` : field).join(',');
+    });
+
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `adhyaa_orders_export_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`${ordersToExport.length} orders exported successfully!`);
+    setSelectedOrderIds(new Set());
   };
 
   // Render Login Form if not authenticated
@@ -277,7 +525,7 @@ export default function AdminDashboard() {
                   <Label htmlFor="admin-key" className="mb-2 block">Admin API Key</Label>
                   <Input
                     id="admin-key"
-                    type="password" // Use type="password" for security
+                    type="password"
                     placeholder="********************"
                     value={adminKey}
                     onChange={(e) => setAdminKey(e.target.value)}
@@ -344,6 +592,7 @@ export default function AdminDashboard() {
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option> {/* Added refunded to filter options */}
               </select>
             </div>
             <div className="flex items-center gap-2 w-full md:w-2/3">
@@ -355,6 +604,67 @@ export default function AdminDashboard() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-grow"
               />
+            </div>
+          </div>
+
+          {/* Bulk Actions Controls */}
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center">
+              <Input
+                type="checkbox"
+                className="mr-2 h-4 w-4"
+                checked={selectedOrderIds.size === orders.length && orders.length > 0}
+                onChange={handleSelectAllOrders}
+                disabled={orders.length === 0 || loading || isBulkProcessing}
+              />
+              <Label className="text-sm">Select All ({selectedOrderIds.size} selected)</Label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedOrderIds.size > 0 && (
+                <>
+                  <Button
+                    onClick={() => handleBulkUpdateStatus('processing')}
+                    disabled={isBulkProcessing || loading}
+                    variant="outline"
+                    className="flex items-center"
+                  >
+                    {isBulkProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Mark as Processing
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkUpdateStatus('shipped')}
+                    disabled={isBulkProcessing || loading}
+                    variant="outline"
+                    className="flex items-center"
+                  >
+                    {isBulkProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Mark as Shipped
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkUpdateStatus('delivered')}
+                    disabled={isBulkProcessing || loading}
+                    variant="outline"
+                    className="flex items-center"
+                  >
+                    {isBulkProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Mark as Delivered
+                  </Button>
+                  <Button
+                    onClick={handleBulkPrint}
+                    disabled={isBulkProcessing || loading}
+                    variant="outline"
+                  >
+                    Print Selected Invoices
+                  </Button>
+                  <Button
+                    onClick={handleBulkExport}
+                    disabled={isBulkProcessing || loading}
+                    variant="outline"
+                  >
+                    Export Selected
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -382,20 +692,36 @@ export default function AdminDashboard() {
           {!loading && orders.length > 0 && (
             <div className="grid grid-cols-1 gap-6">
               {orders.map((order) => (
-                <div key={order.id} className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
+                <div
+                  key={order.id}
+                  className="bg-white p-6 rounded-lg shadow-md border border-gray-100 cursor-pointer"
+                  onClick={() => setSelectedOrder(order)} // Opens details modal
+                >
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-4 border-b border-dashed border-gray-200">
-                    <div>
-                      <h2 className="text-xl font-semibold text-pickle-700">Order #{order.order_id}</h2>
-                      <p className="text-sm text-muted-foreground">
-                        Placed on: {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
-                      </p>
+                    <div className="flex items-center">
+                      <Input
+                        type="checkbox"
+                        className="mr-3 h-4 w-4"
+                        checked={selectedOrderIds.has(order.id)}
+                        onChange={() => handleSelectOrder(order.id)}
+                        onClick={(e) => e.stopPropagation()} // Prevent modal from opening
+                      />
+                      <div>
+                        <h2 className="text-xl font-semibold text-pickle-700">Order #{order.order_id}</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Placed on: {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
+                        </p>
+                      </div>
                     </div>
                     <div className="mt-2 md:mt-0">
                       <Label htmlFor={`status-${order.id}`} className="sr-only">Order Status</Label>
                       <select
                         id={`status-${order.id}`}
                         value={order.order_status}
-                        onChange={(e) => handleUpdateStatus(order.id, e.target.value as Order['order_status'])}
+                        onChange={(e) => {
+                          e.stopPropagation(); // Prevent modal from opening
+                          handleUpdateStatus(order.id, e.target.value as Order['order_status']);
+                        }}
                         className={cn(
                           "px-3 py-2 rounded-md border text-sm font-medium",
                           {
@@ -404,15 +730,17 @@ export default function AdminDashboard() {
                             'bg-purple-100 text-purple-800 border-purple-300': order.order_status === 'shipped',
                             'bg-green-100 text-green-800 border-green-300': order.order_status === 'delivered',
                             'bg-red-100 text-red-800 border-red-300': order.order_status === 'cancelled',
+                            'bg-gray-100 text-gray-800 border-gray-300': order.order_status === 'refunded', // Style for refunded
                           }
                         )}
-                        disabled={loading}
+                        disabled={isUpdatingStatus || loading}
                       >
                         <option value="pending">Pending</option>
                         <option value="processing">Processing</option>
                         <option value="shipped">Shipped</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option> {/* Added refunded to single status options */}
                       </select>
                     </div>
                   </div>
@@ -445,28 +773,21 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Ordered Items */}
+                  {/* Ordered Items Summary (details in modal) */}
                   <div>
-                    <h3 className="font-semibold text-lg mb-2 text-spice-600">Ordered Items</h3>
-                    <ul className="space-y-2">
-                      {order.ordered_items && order.ordered_items.length > 0 ? ( // Added check for null/empty array
-                        order.ordered_items.map((item, idx) => (
-                          <li key={idx} className="flex items-center space-x-3 text-muted-foreground">
-                            <img
-                              src={item.product?.image || 'https://placehold.co/50x50/e0e0e0/ffffff?text=No+Img'} // Added ?.
-                              alt={item.product?.name || 'Product Image'} // Added ?.
-                              className="w-12 h-12 object-cover rounded-md"
-                            />
-                            <div>
-                              <p className="font-medium text-foreground">{item.product?.name || 'Unknown Product'}</p> {/* Added ?. */}
-                              <p className="text-sm">
-                                {item.quantity || 0} x {item.weight || 'N/A'}g @ {formatPrice(item.product?.pricePerWeight?.[item.weight] || 0)} {/* Added ?. for pricePerWeight */}
-                              </p>
-                            </div>
+                    <h3 className="font-semibold text-lg mb-2 text-spice-600">Ordered Items Summary</h3>
+                    <ul className="list-disc list-inside text-muted-foreground">
+                      {order.ordered_items && order.ordered_items.length > 0 ? (
+                        order.ordered_items.slice(0, 3).map((item, idx) => ( // Show first 3, indicate more
+                          <li key={idx} className="text-sm">
+                            {item.quantity} x {item.product?.name || 'Unknown'} ({item.weight}g)
                           </li>
                         ))
                       ) : (
-                        <p className="text-muted-foreground italic">No items found for this order.</p> // Fallback message
+                        <li className="text-muted-foreground italic text-sm">No items found.</li>
+                      )}
+                      {order.ordered_items && order.ordered_items.length > 3 && (
+                        <li className="text-sm italic">...and {order.ordered_items.length - 3} more items.</li>
                       )}
                     </ul>
                   </div>
@@ -477,6 +798,140 @@ export default function AdminDashboard() {
         </main>
         <Footer />
       </div>
+
+      {/* --- Order Details Modal --- */}
+      {selectedOrder && (
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Order Details for #{selectedOrder.order_id}</DialogTitle>
+              <DialogDescription>
+                Comprehensive view of the order placed on {new Date(selectedOrder.created_at).toLocaleString()}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-6">
+              {/* Customer Information */}
+              <section>
+                <h3 className="font-semibold text-xl mb-2 text-spice-600">Customer Details</h3>
+                <p><strong>Name:</strong> {selectedOrder.customer_info.fullName}</p>
+                <p><strong>Email:</strong> {selectedOrder.customer_info.email}</p>
+                <p><strong>Phone:</strong> {selectedOrder.customer_info.phoneNumber}</p>
+                <p><strong>Address:</strong> {selectedOrder.customer_info.address}, {selectedOrder.customer_info.city}, {selectedOrder.customer_info.state} - {selectedOrder.customer_info.postalCode}</p>
+                {/* {selectedOrder.customer_info.deliveryNotes && <p><strong>Delivery Notes:</strong> {selectedOrder.customer_info.deliveryNotes}</p>} */}
+              </section>
+
+              <hr className="my-4" />
+
+              {/* Detailed Item Breakdown */}
+              <section>
+                <h3 className="font-semibold text-xl mb-2 text-spice-600">Ordered Items</h3>
+                <ul className="space-y-4">
+                  {selectedOrder.ordered_items && selectedOrder.ordered_items.length > 0 ? (
+                    selectedOrder.ordered_items.map((item, idx) => (
+                      <li key={idx} className="flex items-start space-x-4 p-2 border rounded-md bg-gray-50">
+                        <img
+                          src={item.product?.image || 'https://placehold.co/80x80/e0e0e0/ffffff?text=No+Img'}
+                          alt={item.product?.name || 'Product Image'}
+                          className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                        />
+                        <div className="flex-grow">
+                          <p className="font-medium text-lg text-foreground">{item.product?.name || 'Unknown Product'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.quantity} x {item.weight}g @ {formatPrice(item.product?.pricePerWeight?.[item.weight] || 0)} each
+                          </p>
+                          <p className="font-semibold text-sm mt-1">
+                            Total: {formatPrice(item.quantity * (item.product?.pricePerWeight?.[item.weight] || 0))}
+                          </p>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground italic">No items found for this order.</p>
+                  )}
+                </ul>
+              </section>
+
+              <hr className="my-4" />
+
+              {/* Order History/Timeline (Requires backend logging) */}
+              <section>
+                <h3 className="font-semibold text-xl mb-2 text-spice-600">Order History</h3>
+                <p className="text-muted-foreground">Order placed: {new Date(selectedOrder.created_at).toLocaleString()}</p>
+                <p className="text-muted-foreground">Last updated: {new Date(selectedOrder.updated_at).toLocaleString()}</p>
+                <p className="text-muted-foreground">Current Status: <span className={cn(
+                  "font-semibold",
+                  {
+                    'text-yellow-800': selectedOrder.order_status === 'pending',
+                    'text-blue-800': selectedOrder.order_status === 'processing',
+                    'text-purple-800': selectedOrder.order_status === 'shipped',
+                    'text-green-800': selectedOrder.order_status === 'delivered',
+                    'text-red-800': selectedOrder.order_status === 'cancelled',
+                    'text-gray-800': selectedOrder.order_status === 'refunded',
+                  }
+                )}>{selectedOrder.order_status.charAt(0).toUpperCase() + selectedOrder.order_status.slice(1)}</span></p>
+              </section>
+
+              <hr className="my-4" />
+
+              {/* Payment Gateway Details */}
+              <section>
+                <h3 className="font-semibold text-xl mb-2 text-spice-600">Payment Information</h3>
+                <p><strong>Payment Method:</strong> {selectedOrder.payment_method === 'cod' ? 'Cash on Delivery' : 'Razorpay'}</p>
+                {selectedOrder.payment_id && <p><strong>Transaction ID:</strong> {selectedOrder.payment_id}</p>}
+                <p className="font-bold text-lg text-pickle-700 mt-2">Total Amount: {formatPrice(selectedOrder.total_amount)}</p>
+              </section>
+
+              <hr className="my-4" />
+
+              {/* Action Buttons: Refund & Cancel */}
+              <section className="flex flex-wrap gap-4 justify-end">
+                {selectedOrder.payment_method === 'razorpay' && selectedOrder.payment_id && selectedOrder.order_status !== 'cancelled' && selectedOrder.order_status !== 'refunded' && (
+                  <Button
+                    onClick={() => handleRefund(selectedOrder.id, selectedOrder.payment_id!, selectedOrder.total_amount)}
+                    disabled={isRefunding || selectedOrder.order_status === 'delivered'}
+                    variant="destructive"
+                  >
+                    {isRefunding ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Refunding...
+                      </>
+                    ) : (
+                      "Initiate Full Refund"
+                    )}
+                  </Button>
+                )}
+
+                {selectedOrder.order_status !== 'cancelled' && selectedOrder.order_status !== 'delivered' && selectedOrder.order_status !== 'refunded' && (
+                  <Button
+                    onClick={() => handleCancelOrder(selectedOrder.id)}
+                    disabled={isCancelling || isRefunding}
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-50"
+                  >
+                    {isCancelling ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      "Cancel Order"
+                    )}
+                  </Button>
+                )}
+
+                <Button
+                  onClick={() => window.print()}
+                  variant="secondary"
+                >
+                  Print Invoice/Packing Slip
+                </Button>
+              </section>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
