@@ -1,287 +1,181 @@
-// src/routes/admin.js
-const express = require('express');
-const asyncHandler = require('express-async-handler'); // For simplifying error handling in async routes
-// Razorpay client utility
-const { generateInvoicePdf } = require('../services/pdfGenerator'); // PDF generation service
+// src/services/pdfGenerator.js
+const PDFDocument = require('pdfkit');
+const fs = require('fs'); // Node.js File System module, used here to check for logo existence
 
-// This module exports a function that accepts 'supabase' and 'io' (Socket.IO instance)
-module.exports = (supabase, io) => {
-    const router = express.Router(); // Create a new Express router instance
+async function generateInvoicePdf(orders, res) {
+    // Basic validation: ensure orders is an array and not empty
+    if (!Array.isArray(orders) || orders.length === 0) {
+        throw new Error("No orders provided for PDF generation.");
+    }
 
-    // --- Admin Dashboard API Endpoints ---
+    // Create a new PDF document with standard margins
+    const doc = new PDFDocument({ margin: 50 });
 
-    // GET /api/admin/orders - Get All Orders (with filters and search)
-    router.get('/orders', asyncHandler(async (req, res) => {
-        const { status, search } = req.query; // Get status and search query parameters
+    // Pipe the PDF content directly to the HTTP response stream.
+    // This allows the browser to receive the PDF as it's being generated.
+    doc.pipe(res);
 
-        let query = supabase.from('orders').select('*'); // Start building Supabase query
+    // Loop through each order to create an invoice page for it
+    for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
 
-        // Apply status filter if provided
-        if (status && status !== 'all') {
-            query = query.eq('order_status', status);
+        // Add a new page for each subsequent order (except the very first one)
+        if (i > 0) {
+            doc.addPage();
         }
 
-        // Apply search filter if provided (case-insensitive search on order_id, customer name, or email)
-        if (search) {
-            query = query.or(`order_id.ilike.%${search}%,customer_info->>fullName.ilike.%${search}%,customer_info->>email.ilike.%${search}%`);
+        // --- Company Header (Your Brand Details) ---
+        // Path to your logo. Make sure this path is correct relative to where your backend runs.
+        // For example, if app.js is in `backend/src`, and logo is in `backend/public`, use './public/adhyaa_logo.png'
+        const logoPath = './public/adhyaa_logo.png';
+        if (fs.existsSync(logoPath)) { // Check if logo file exists to prevent errors
+            doc.image(logoPath, 50, 45, { width: 60 }) // Place logo at x=50, y=45 with 60px width
+               .moveDown(0.5); // Move cursor down slightly after logo
         }
 
-        // Order results by creation date, newest first
-        query = query.order('created_at', { ascending: false });
+        doc.fillColor('#333') // Dark gray text color
+           .fontSize(22) // Larger font for company name
+           .font('Helvetica-Bold') // Bold font
+           .text('ADHYAA PICKLES', 120, 60); // Company name, adjusted x-coordinate for logo
 
-        const { data, error } = await query; // Execute the query
+        doc.fontSize(10) // Smaller font for address/contact
+           .font('Helvetica') // Regular font
+           .text('Your Company Address Line 1', { align: 'right' }) // Right-aligned address
+           .text('City, State, PIN CODE', { align: 'right' })
+           .text('Email: support@adhyaapickles.com', { align: 'right' })
+           .text('Phone: +91-9876543210', { align: 'right' })
+           .moveDown(2); // Move cursor down for spacing
 
-        if (error) {
-            console.error('Error fetching orders:', error.message);
-            return res.status(500).json({ message: 'Failed to fetch orders.', error: error.message });
+        // --- Invoice Header (Title and Document Details) ---
+        doc.fontSize(28).font('Helvetica-Bold').fillColor('#555').text('INVOICE', 50, doc.y) // "INVOICE" title
+           .fontSize(12).font('Helvetica')
+           .fillColor('#000') // Reset color to black
+           .text(`Invoice # ${order.order_id}`, { align: 'right' }) // Your custom order ID
+           .text(`Date: ${new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, { align: 'right' }) // Formatted date
+           .text(`Order ID: ${order.id}`, { align: 'right' }) // Supabase UUID
+           .moveDown(2); // Move cursor down for spacing
+
+        // --- Customer and Order Details ---
+        const customerInfo = order.customer_info; // Destructure customer information
+        const startYDetails = doc.y; // Capture current Y position for alignment
+
+        doc.fontSize(11).font('Helvetica-Bold')
+           .text('Bill To:', 50, startYDetails) // "Bill To" label
+           .font('Helvetica')
+           .text(customerInfo.fullName, 50, startYDetails + 15) // Customer's full name
+           .text(customerInfo.address, 50, startYDetails + 30) // Customer's address
+           .text(`${customerInfo.city}, ${customerInfo.state} - ${customerInfo.postalCode}`, 50, startYDetails + 45); // City, State, Postal Code
+
+        // Payment and Status on the right side, aligned with customer details
+        doc.fontSize(11).font('Helvetica-Bold')
+           .text('Payment Method:', 300, startYDetails) // Payment method label
+           .font('Helvetica')
+           .text(order.payment_method === 'cod' ? 'Cash on Delivery' : 'Razorpay', 300, startYDetails + 15); // Payment method value
+        if (order.payment_id) { // Show transaction ID if available (for Razorpay)
+            doc.fontSize(11).font('Helvetica-Bold')
+               .text('Transaction ID:', 300, startYDetails + 30)
+               .font('Helvetica')
+               .text(order.payment_id, 300, startYDetails + 45);
+        }
+        doc.fontSize(11).font('Helvetica-Bold')
+           .text('Order Status:', 300, doc.y + 15) // Order status label
+           .font('Helvetica')
+           .text(order.order_status.toUpperCase().replace(/_/g, ' '), 300, doc.y + 15); // Order status value, formatted
+
+        doc.moveDown(3); // Adjust spacing after details section
+
+        // --- Items Table Header ---
+        const tableTop = doc.y; // Y position for the top of the table
+        const col1X = 50;   // Product Name
+        const col2X = 280;  // Weight
+        const col3X = 350;  // Quantity
+        const col4X = 420;  // Unit Price
+        const col5X = 500;  // Total Price (for item)
+
+        doc.fillColor('#000').font('Helvetica-Bold')
+           .text('Product Name', col1X, tableTop)
+           .text('Weight', col2X, tableTop, { width: 50, align: 'right' })
+           .text('Qty', col3X, tableTop, { width: 30, align: 'right' })
+           .text('Unit Price', col4X, tableTop, { width: 60, align: 'right' })
+           .text('Total', col5X, tableTop, { width: 60, align: 'right' });
+
+        // Draw a line below the header
+        doc.lineWidth(0.5).moveTo(col1X, tableTop + 20).lineTo(doc.page.width - 50, tableTop + 20).stroke();
+
+        // --- Items Table Rows ---
+        let itemY = tableTop + 30; // Starting Y position for the first item row
+        const rowHeight = 25; // Height allocated for each item row
+        doc.font('Helvetica').fontSize(10); // Font for item details
+
+        order.ordered_items.forEach(item => {
+            // Calculate unit price and item total. Handle cases where product or pricePerWeight might be missing.
+            const unitPrice = item.product?.pricePerWeight?.[item.weight] || item.unitPrice || 0;
+            const itemTotal = item.quantity * unitPrice;
+
+            doc.text(item.product?.name || 'N/A', col1X, itemY, { width: 220 }) // Product Name
+               .text(`${item.weight}g`, col2X, itemY, { width: 50, align: 'right' }) // Weight
+               .text(item.quantity.toString(), col3X, itemY, { width: 30, align: 'right' }) // Quantity
+               .text(`₹${unitPrice.toFixed(2)}`, col4X, itemY, { width: 60, align: 'right' }) // Unit Price
+               .text(`₹${itemTotal.toFixed(2)}`, col5X, itemY, { width: 60, align: 'right' }); // Item Total
+            itemY += rowHeight; // Move to the next line for the next item
+        });
+
+        // Draw a line after the last item
+        doc.lineWidth(0.5).moveTo(col1X, itemY + 5).lineTo(doc.page.width - 50, itemY + 5).stroke();
+
+        // --- Totals Section ---
+        const totalsStartY = itemY + 15; // Starting Y position for totals
+        doc.font('Helvetica-Bold').fontSize(10)
+           .text('Subtotal:', 380, totalsStartY, { width: 100, align: 'right' })
+           .font('Helvetica')
+           .text(`₹${order.subtotal.toFixed(2)}`, 480, totalsStartY, { width: 60, align: 'right' });
+
+        if (order.discount_amount > 0) {
+            doc.font('Helvetica-Bold')
+               .text('Discount:', 380, totalsStartY + 15, { width: 100, align: 'right' })
+               .font('Helvetica')
+               .fillColor('green') // Green color for discount
+               .text(`-₹${order.discount_amount.toFixed(2)}`, 480, totalsStartY + 15, { width: 60, align: 'right' });
+            doc.fillColor('#000'); // Reset color to black
         }
 
-        // Ensure 'ordered_items' is always an array to prevent frontend crashes
-        const ordersWithParsedItems = data.map(order => ({
-            ...order,
-            ordered_items: order.ordered_items || []
-        }));
+        doc.font('Helvetica-Bold')
+           .text('Shipping:', 380, totalsStartY + 30, { width: 100, align: 'right' })
+           .font('Helvetica')
+           .text(`₹${order.shipping_cost.toFixed(2)}`, 480, totalsStartY + 30, { width: 60, align: 'right' });
 
-        res.status(200).json(ordersWithParsedItems); // Send back the fetched orders
-    }));
+        doc.font('Helvetica-Bold')
+           .text('Taxes:', 380, totalsStartY + 45, { width: 100, align: 'right' })
+           .font('Helvetica')
+           .text(`₹${order.taxes.toFixed(2)}`, 480, totalsStartY + 45, { width: 60, align: 'right' });
 
-    // PATCH /api/admin/orders/:orderId - Update Order Status
-    router.patch('/orders/:orderId', asyncHandler(async (req, res) => {
-        const { orderId } = req.params; // Get order ID from URL
-        const { newStatus } = req.body; // Get the new status from request body
-
-        if (!newStatus) {
-            return res.status(400).json({ message: 'New status is required.' });
+        if (order.additional_fees > 0) {
+            doc.font('Helvetica-Bold')
+               .text('Additional Fees:', 380, totalsStartY + 60, { width: 100, align: 'right' })
+               .font('Helvetica')
+               .text(`₹${order.additional_fees.toFixed(2)}`, 480, totalsStartY + 60, { width: 60, align: 'right' });
         }
 
-        // Define allowed status values for validation
-        const allowedStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded', 'cancelled_and_refunded'];
-        if (!allowedStatuses.includes(newStatus)) {
-            return res.status(400).json({ message: 'Invalid status provided.' });
-        }
+        // Grand Total Box - Visually highlight the total amount
+        const grandTotalY = totalsStartY + 75;
+        doc.rect(370, grandTotalY, 180, 30) // Draw a rectangle for the total box
+           .fillAndStroke('#f0f0f0', '#ccc'); // Fill with light gray, stroke with a light border
 
-        // Update the order status in Supabase
-        const { data: order, error } = await supabase
-            .from('orders')
-            .update({ order_status: newStatus, updated_at: new Date().toISOString() }) // Update status and timestamp
-            .eq('id', orderId) // Apply update to specific order
-            .select() // Select the updated row to return it
-            .single(); // Expect a single updated record
+        doc.fillColor('#000').font('Helvetica-Bold').fontSize(14)
+           .text('GRAND TOTAL:', 380, grandTotalY + 8, { width: 100, align: 'left' })
+           .text(`₹${order.total_amount.toFixed(2)}`, 490, grandTotalY + 8, { width: 60, align: 'right' });
 
-        if (error) {
-            console.error(`Error updating order ${orderId}:`, error.message);
-            return res.status(500).json({ message: 'Failed to update order status.', error: error.message });
-        }
+        doc.moveDown(2); // Spacing before footer
 
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found.' });
-        }
+        // --- Footer ---
+        doc.fontSize(10).font('Helvetica-Oblique')
+           .text('Thank you for your business! We appreciate your order.', 50, doc.y + 30, { align: 'center' });
+        doc.fontSize(8).font('Helvetica')
+           .text('This is a computer generated invoice and does not require a signature.', 50, doc.y + 15, { align: 'center' });
 
-        // Emit WebSocket event to notify connected clients about the order update
-        io.emit('orderUpdated', order);
+    } // End of forEach order loop
 
-        res.status(200).json({ message: 'Order status updated successfully.', order });
-    }));
+    doc.end(); // Finalize the PDF document. This sends the buffered content to the response.
+}
 
-    // POST /api/admin/orders/:orderId/refund - Initiate Refund
-    router.post('/orders/:orderId/refund', asyncHandler(async (req, res) => {
-        const { orderId } = req.params;
-        const { amount, paymentId } = req.body; // `amount` should be in paisa from frontend, `paymentId` is Razorpay's ID
-
-        // Basic validation
-        if (!amount || !paymentId) {
-            return res.status(400).json({ message: 'Amount and payment ID are required for refund.' });
-        }
-
-        // Fetch order from your DB to get actual payment_id and total_amount for validation
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .select('payment_id, total_amount, order_status')
-            .eq('id', orderId)
-            .single();
-
-        if (orderError || !order) {
-            return res.status(404).json({ message: 'Order not found or database error.' });
-        }
-        // Cross-check provided paymentId with the one in your database
-        if (order.payment_id !== paymentId) {
-            return res.status(400).json({ message: 'Provided payment ID does not match order record.' });
-        }
-        // Prevent double refunds or refunding cancelled orders
-        if (['refunded', 'cancelled', 'cancelled_and_refunded'].includes(order.order_status)) {
-            return res.status(400).json({ message: `Order is already ${order.order_status}. Cannot refund.` });
-        }
-        // Ensure refund amount doesn't exceed total amount (in paisa)
-        if (amount > Math.round(order.total_amount * 100)) {
-            return res.status(400).json({ message: 'Refund amount cannot exceed total order amount.' });
-        }
-
-        try {
-            // Initiate refund via Razorpay API
-            const refund = await razorpay.payments.refund(paymentId, {
-                amount: amount, // Amount in paisa
-                speed: 'optimum', // 'optimum' for instant, 'normal' for 5-7 days
-            });
-
-            // Update order status in your database to 'refunded'
-            const { data: updatedOrder, error: updateError } = await supabase
-                .from('orders')
-                .update({
-                    order_status: 'refunded',
-                    updated_at: new Date().toISOString(),
-                    // You could add refund details to a separate JSONB column here if needed
-                })
-                .eq('id', orderId)
-                .select()
-                .single();
-
-            if (updateError) throw updateError;
-
-            io.emit('orderUpdated', updatedOrder); // Emit WebSocket event for orderUpdated
-
-            res.status(200).json({ message: 'Refund initiated successfully.', refund, updatedOrder });
-        } catch (razorpayError) {
-            console.error('Razorpay Refund Error:', razorpayError);
-            // Razorpay errors often have `error.code` and `error.description`
-            res.status(500).json({ message: 'Failed to initiate refund via Razorpay.', error: razorpayError.description || razorpayError.message });
-        }
-    }));
-
-    // POST /api/admin/orders/:orderId/cancel - Cancel Order
-    router.post('/orders/:orderId/cancel', asyncHandler(async (req, res) => {
-        const { orderId } = req.params;
-
-        // Fetch order to check current status and payment method
-        const { data: order, error: fetchError } = await supabase
-            .from('orders')
-            .select('id, order_id, payment_method, payment_id, total_amount, order_status')
-            .eq('id', orderId)
-            .single();
-
-        if (fetchError || !order) {
-            return res.status(404).json({ message: 'Order not found or database error.' });
-        }
-
-        // Prevent cancellation if already cancelled or delivered
-        if (['cancelled', 'delivered', 'refunded', 'cancelled_and_refunded'].includes(order.order_status)) {
-            return res.status(400).json({ message: `Order cannot be cancelled. Current status: ${order.order_status}.` });
-        }
-
-        // Update order status to 'cancelled'
-        const { data: updatedOrder, error: updateError } = await supabase
-            .from('orders')
-            .update({ order_status: 'cancelled', updated_at: new Date().toISOString() })
-            .eq('id', orderId)
-            .select()
-            .single();
-
-        if (updateError) {
-            console.error(`Error updating order ${orderId} to cancelled:`, updateError.message);
-            return res.status(500).json({ message: 'Failed to update order status to cancelled.', error: updateError.message });
-        }
-
-        // Optional: Attempt to refund if it was a Razorpay payment and not already refunded
-        if (order.payment_method === 'razorpay' && order.payment_id && order.order_status !== 'refunded') {
-            try {
-                console.log(`Attempting to refund cancelled order ${order.order_id} (Payment ID: ${order.payment_id})`);
-                const refund = await razorpay.payments.refund(order.payment_id, {
-                    amount: Math.round(order.total_amount * 100), // Refund full amount in paisa
-                    speed: 'optimum',
-                });
-                console.log(`Refund initiated for cancelled order ${order.order_id}:`, refund);
-
-                // If refund succeeds, update status to indicate both cancellation and refund
-                const { data: finalUpdatedOrder } = await supabase.from('orders')
-                    .update({ order_status: 'cancelled_and_refunded', updated_at: new Date().toISOString() })
-                    .eq('id', orderId)
-                    .select()
-                    .single();
-
-                io.emit('orderUpdated', finalUpdatedOrder); // Emit WebSocket event for the final status
-
-            } catch (refundError) {
-                console.error(`Error refunding cancelled order ${order.order_id}:`, refundError.description || refundError.message);
-                // Log this error, but do not fail the cancellation itself.
-                // Notify frontend that cancellation happened but refund failed.
-                return res.status(200).json({
-                    message: 'Order cancelled, but automatic refund failed. Please initiate refund manually.',
-                    order: updatedOrder,
-                    refundError: refundError.description || refundError.message
-                });
-            }
-        } else {
-            // Only emit if no refund was attempted or if COD
-            io.emit('orderUpdated', updatedOrder); // Emit WebSocket event
-        }
-
-        res.status(200).json({ message: 'Order cancelled successfully.', order: updatedOrder });
-    }));
-
-
-    // GET /api/admin/orders/single-invoice/:orderId - Generate Single Invoice PDF
-    // This route generates a PDF for a single order, typically opened in a new browser tab.
-    router.get('/orders/single-invoice/:orderId', asyncHandler(async (req, res) => {
-        const { orderId } = req.params; // Get the order ID from the URL parameters
-
-        // Fetch the single order's detailed information from Supabase
-        const { data: order, error } = await supabase
-            .from('orders')
-            .select('*') // Select all necessary details for the invoice
-            .eq('id', orderId) // Filter by the specific order ID
-            .single(); // Expect only one record
-
-        // Handle case where order is not found or a database error occurs
-        if (error || !order) {
-            console.error(`Error fetching order ${orderId} for invoice:`, error?.message || 'Order not found');
-            return res.status(404).json({ message: 'Order not found or database error.' });
-        }
-
-        // Set HTTP headers for PDF download. 'inline' suggests the browser should try to display it.
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename=adhyaa_invoice_${order.order_id}.pdf`);
-
-        // Generate the PDF for this single order and pipe it directly to the response stream
-        // The `generateInvoicePdf` function expects an array of orders, so we pass `[order]`
-        await generateInvoicePdf([order], res);
-
-        // No `res.json()` here because the PDF stream is being sent directly.
-    }));
-
-    // POST /api/admin/orders/bulk-print - Generate Bulk Invoice PDF
-    // This route generates a single PDF containing invoices for multiple selected orders.
-    router.post('/orders/bulk-print', asyncHandler(async (req, res) => {
-        const { orderIds } = req.body; // Expect an array of order IDs from the request body
-
-        // Validate input
-        if (!Array.isArray(orderIds) || orderIds.length === 0) {
-            return res.status(400).json({ message: 'No order IDs provided for bulk print.' });
-        }
-
-        // Fetch detailed information for all selected orders from Supabase
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select('*') // Select all necessary details for the invoice
-            .in('id', orderIds) // Filter by the provided array of IDs
-            .order('created_at', { ascending: true }); // Order them for consistent PDF page order
-
-        if (error) {
-            console.error('Error fetching orders for bulk print:', error.message);
-            return res.status(500).json({ message: 'Failed to retrieve orders for printing.', error: error.message });
-        }
-
-        if (orders.length === 0) {
-            return res.status(404).json({ message: 'No orders found matching the provided IDs.' });
-        }
-
-        // Set HTTP headers for PDF download. 'attachment' prompts the browser to download the file.
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=adhyaa_bulk_invoices_${Date.now()}.pdf`);
-
-        // Generate the PDF for the fetched orders and pipe it directly to the response stream
-        await generateInvoicePdf(orders, res);
-
-        // No `res.json()` here because the PDF stream is being sent directly.
-    }));
-
-    return router; // Export the router with all defined routes
-};
+module.exports = { generateInvoicePdf }; // Export the function
