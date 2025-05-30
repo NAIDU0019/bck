@@ -24,7 +24,7 @@ import {
 // Define the structure of an order as it comes from your backend/Supabase
 interface Order {
   id: string; // Supabase UUID
-  order_id: string; // Your custom ADH-timestamp ID
+  order_id: string; // Your custom ADH-timestamp ID (e.g., ADH-12345)
   customer_info: {
     fullName: string;
     email: string;
@@ -33,8 +33,7 @@ interface Order {
     state: string;
     postalCode: string;
     phoneNumber: string;
-    // Add deliveryNotes here if you store them in customer_info
-    // deliveryNotes?: string;
+    deliveryNotes?: string; // Added deliveryNotes as it's common
   };
   ordered_items: Array<{
     product: {
@@ -45,7 +44,7 @@ interface Order {
     };
     weight: string; // '100', '250', '500', '1000'
     quantity: number;
-    unitPrice?: number; // Add unitPrice here if your backend also stores it directly on the item
+    unitPrice?: number; // Price of the item at the time of order
   }> | null; // IMPORTANT: Allow ordered_items to be null to prevent crashes
   subtotal: number;
   discount_amount: number;
@@ -54,15 +53,15 @@ interface Order {
   additional_fees: number;
   total_amount: number;
   payment_method: 'cod' | 'razorpay';
-  payment_id?: string;
+  payment_id?: string; // Transaction ID for Razorpay
   applied_coupon?: {
     code: string;
     discountPercent: number;
   };
-  order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'; // Added 'refunded'
+  order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'cancelled_and_refunded'; // Extended statuses
   created_at: string;
   updated_at: string;
-  // Add an optional field for order history if your backend provides it
+  // Optional: Add order history for audit trail if your backend provides it
   // history?: Array<{ status: Order['order_status']; timestamp: string; changedBy?: string }>;
 }
 
@@ -74,7 +73,7 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!initialAdminKey);
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false); // General loading state
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<Order['order_status'] | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -85,10 +84,12 @@ export default function AdminDashboard() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false); // For single order status update
   const [isRefunding, setIsRefunding] = useState<boolean>(false); // For refund action
   const [isCancelling, setIsCancelling] = useState<boolean>(false); // For cancel action
+  const [isPrintingSingle, setIsPrintingSingle] = useState<boolean>(false); // For single invoice printing
 
   // State for Bulk Actions
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false); // For all bulk status updates
+  const [isBulkPrinting, setIsBulkPrinting] = useState<boolean>(false); // For bulk invoice printing
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -253,7 +254,7 @@ export default function AdminDashboard() {
         throw new Error(errorData.message || 'Failed to update order status.');
       }
 
-      const updatedOrder = await response.json();
+      const updatedOrder = await response.json(); // The response contains the order object
       setOrders(prevOrders =>
         prevOrders.map(order => (order.id === orderId ? { ...order, order_status: newStatus } : order))
       );
@@ -284,7 +285,6 @@ export default function AdminDashboard() {
 
     setIsRefunding(true);
     try {
-      // THIS ENDPOINT MUST BE IMPLEMENTED ON YOUR BACKEND
       const response = await fetch(`${backendUrl}/api/admin/orders/${orderId}/refund`, {
         method: 'POST',
         headers: {
@@ -301,8 +301,10 @@ export default function AdminDashboard() {
       }
 
       toast.success(`Refund of ${formatPrice(totalAmount)} initiated successfully for Order #${selectedOrder?.order_id || orderId}!`);
+      // Re-fetch orders to get the updated status (e.g., 'refunded' or 'cancelled_and_refunded')
       fetchOrders();
       if (selectedOrder && selectedOrder.id === orderId) {
+        // Update modal state to reflect the refund status
         setSelectedOrder(prev => prev ? { ...prev, order_status: 'refunded' } : null);
       }
 
@@ -322,7 +324,6 @@ export default function AdminDashboard() {
 
     setIsCancelling(true);
     try {
-      // THIS ENDPOINT MUST BE IMPLEMENTED ON YOUR BACKEND
       const response = await fetch(`${backendUrl}/api/admin/orders/${orderId}/cancel`, {
         method: 'POST',
         headers: {
@@ -338,9 +339,8 @@ export default function AdminDashboard() {
       }
 
       toast.success(`Order #${selectedOrder?.order_id || orderId} has been cancelled successfully.`);
-      setOrders(prevOrders =>
-        prevOrders.map(order => (order.id === orderId ? { ...order, order_status: 'cancelled' } : order))
-      );
+      // Re-fetch orders to get the updated status (e.g., 'cancelled' or 'cancelled_and_refunded')
+      fetchOrders();
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(prev => prev ? { ...prev, order_status: 'cancelled' } : null);
       }
@@ -351,6 +351,40 @@ export default function AdminDashboard() {
       setIsCancelling(false);
     }
   };
+
+  // Handle printing a single invoice via backend
+  const handlePrintSingleInvoice = async (orderId: string, orderCustomId: string) => {
+    setIsPrintingSingle(true);
+    try {
+      toast.info(`Generating invoice for Order #${orderCustomId}...`);
+      const response = await fetch(`${backendUrl}/api/admin/orders/single-invoice/${orderId}`, {
+        headers: {
+          'X-Admin-API-Key': adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate single invoice PDF.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      // Open in a new tab for preview/printing
+      window.open(url, '_blank');
+
+      URL.revokeObjectURL(url); // Clean up the object URL
+      toast.success(`Invoice for Order #${orderCustomId} generated!`);
+
+    } catch (error: any) {
+      console.error("Single invoice print error:", error);
+      toast.error(error.message || "Failed to generate invoice. Please try again.");
+    } finally {
+      setIsPrintingSingle(false);
+    }
+  };
+
 
   // --- Bulk Actions Logic ---
   const handleSelectOrder = (orderId: string) => {
@@ -431,12 +465,49 @@ export default function AdminDashboard() {
     setIsBulkProcessing(false);
   };
 
-  const handleBulkPrint = () => {
+  // Handle bulk printing invoices via backend
+  const handleBulkPrint = async () => {
     if (selectedOrderIds.size === 0) {
       toast.info("No orders selected for printing.");
       return;
     }
-    toast.info("Bulk print functionality is not fully implemented yet. Please print individually from order details.");
+
+    setIsBulkPrinting(true);
+    try {
+      toast.info(`Generating bulk invoice PDF for ${selectedOrderIds.size} orders...`);
+      const response = await fetch(`${backendUrl}/api/admin/orders/bulk-print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': adminKey,
+        },
+        body: JSON.stringify({ orderIds: Array.from(selectedOrderIds) }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate bulk print document.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `adhyaa_bulk_invoices_${Date.now()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Generated bulk PDF for ${selectedOrderIds.size} orders!`);
+      setSelectedOrderIds(new Set()); // Clear selection after successful print
+
+    } catch (error: any) {
+      console.error("Bulk print error:", error);
+      toast.error(error.message || "Failed to generate bulk print document.");
+    } finally {
+      setIsBulkPrinting(false);
+    }
   };
 
   const handleBulkExport = () => {
@@ -453,9 +524,9 @@ export default function AdminDashboard() {
     }
 
     const headers = [
-      "OrderID", "CustomOrderID", "CustomerName", "CustomerEmail", "CustomerPhone",
-      "Address", "City", "State", "PostalCode", "TotalAmount", "PaymentMethod",
-      "PaymentID", "OrderStatus", "CreatedAt", "ItemsDetails", "Subtotal", "Discount",
+      "OrderID (Supabase)", "Custom OrderID", "CustomerName", "CustomerEmail", "CustomerPhone",
+      "Address", "City", "State", "PostalCode", "DeliveryNotes", "TotalAmount", "PaymentMethod",
+      "PaymentID", "OrderStatus", "CreatedAt", "UpdatedAt", "ItemsDetails", "Subtotal", "Discount",
       "Taxes", "ShippingCost", "AdditionalFees"
     ];
 
@@ -463,7 +534,7 @@ export default function AdminDashboard() {
       const customerInfo = order.customer_info;
       const itemDetails = order.ordered_items ?
         order.ordered_items.map(item =>
-          `${item.product?.name || 'N/A'} (${item.weight || 'N/A'}g) x ${item.quantity || 0}`
+          `${item.quantity}x ${item.product?.name || 'N/A'} (${item.weight || 'N/A'}g) @ ${formatPrice(item.unitPrice || item.product?.pricePerWeight?.[item.weight] || 0)}`
         ).join('; ') : 'N/A';
 
       return [
@@ -472,15 +543,17 @@ export default function AdminDashboard() {
         `"${customerInfo.fullName}"`,
         `"${customerInfo.email}"`,
         `"${customerInfo.phoneNumber}"`,
-        `"${customerInfo.address}, ${customerInfo.city}, ${customerInfo.state} - ${customerInfo.postalCode}"`,
+        `"${customerInfo.address}"`,
         `"${customerInfo.city}"`,
         `"${customerInfo.state}"`,
         `"${customerInfo.postalCode}"`,
+        `"${customerInfo.deliveryNotes || ''}"`,
         order.total_amount,
         `"${order.payment_method}"`,
         `"${order.payment_id || ''}"`,
         `"${order.order_status}"`,
         `"${new Date(order.created_at).toISOString()}"`,
+        `"${new Date(order.updated_at).toISOString()}"`,
         `"${itemDetails}"`,
         order.subtotal,
         order.discount_amount,
@@ -592,7 +665,8 @@ export default function AdminDashboard() {
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option> {/* Added refunded to filter options */}
+                <option value="refunded">Refunded</option>
+                <option value="cancelled_and_refunded">Cancelled & Refunded</option>
               </select>
             </div>
             <div className="flex items-center gap-2 w-full md:w-2/3">
@@ -615,7 +689,7 @@ export default function AdminDashboard() {
                 className="mr-2 h-4 w-4"
                 checked={selectedOrderIds.size === orders.length && orders.length > 0}
                 onChange={handleSelectAllOrders}
-                disabled={orders.length === 0 || loading || isBulkProcessing}
+                disabled={orders.length === 0 || loading || isBulkProcessing || isBulkPrinting}
               />
               <Label className="text-sm">Select All ({selectedOrderIds.size} selected)</Label>
             </div>
@@ -624,7 +698,7 @@ export default function AdminDashboard() {
                 <>
                   <Button
                     onClick={() => handleBulkUpdateStatus('processing')}
-                    disabled={isBulkProcessing || loading}
+                    disabled={isBulkProcessing || loading || isBulkPrinting}
                     variant="outline"
                     className="flex items-center"
                   >
@@ -633,7 +707,7 @@ export default function AdminDashboard() {
                   </Button>
                   <Button
                     onClick={() => handleBulkUpdateStatus('shipped')}
-                    disabled={isBulkProcessing || loading}
+                    disabled={isBulkProcessing || loading || isBulkPrinting}
                     variant="outline"
                     className="flex items-center"
                   >
@@ -642,7 +716,7 @@ export default function AdminDashboard() {
                   </Button>
                   <Button
                     onClick={() => handleBulkUpdateStatus('delivered')}
-                    disabled={isBulkProcessing || loading}
+                    disabled={isBulkProcessing || loading || isBulkPrinting}
                     variant="outline"
                     className="flex items-center"
                   >
@@ -651,17 +725,19 @@ export default function AdminDashboard() {
                   </Button>
                   <Button
                     onClick={handleBulkPrint}
-                    disabled={isBulkProcessing || loading}
+                    disabled={isBulkProcessing || loading || isBulkPrinting}
                     variant="outline"
+                    className="flex items-center"
                   >
+                     {isBulkPrinting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Print Selected Invoices
                   </Button>
                   <Button
                     onClick={handleBulkExport}
-                    disabled={isBulkProcessing || loading}
+                    disabled={isBulkProcessing || loading || isBulkPrinting}
                     variant="outline"
                   >
-                    Export Selected
+                    Export Selected (CSV)
                   </Button>
                 </>
               )}
@@ -730,7 +806,7 @@ export default function AdminDashboard() {
                             'bg-purple-100 text-purple-800 border-purple-300': order.order_status === 'shipped',
                             'bg-green-100 text-green-800 border-green-300': order.order_status === 'delivered',
                             'bg-red-100 text-red-800 border-red-300': order.order_status === 'cancelled',
-                            'bg-gray-100 text-gray-800 border-gray-300': order.order_status === 'refunded', // Style for refunded
+                            'bg-gray-100 text-gray-800 border-gray-300': order.order_status === 'refunded' || order.order_status === 'cancelled_and_refunded',
                           }
                         )}
                         disabled={isUpdatingStatus || loading}
@@ -740,7 +816,8 @@ export default function AdminDashboard() {
                         <option value="shipped">Shipped</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
-                        <option value="refunded">Refunded</option> {/* Added refunded to single status options */}
+                        <option value="refunded">Refunded</option>
+                        <option value="cancelled_and_refunded">Cancelled & Refunded</option>
                       </select>
                     </div>
                   </div>
@@ -818,7 +895,7 @@ export default function AdminDashboard() {
                 <p><strong>Email:</strong> {selectedOrder.customer_info.email}</p>
                 <p><strong>Phone:</strong> {selectedOrder.customer_info.phoneNumber}</p>
                 <p><strong>Address:</strong> {selectedOrder.customer_info.address}, {selectedOrder.customer_info.city}, {selectedOrder.customer_info.state} - {selectedOrder.customer_info.postalCode}</p>
-                {/* {selectedOrder.customer_info.deliveryNotes && <p><strong>Delivery Notes:</strong> {selectedOrder.customer_info.deliveryNotes}</p>} */}
+                {selectedOrder.customer_info.deliveryNotes && <p><strong>Delivery Notes:</strong> {selectedOrder.customer_info.deliveryNotes}</p>}
               </section>
 
               <hr className="my-4" />
@@ -838,10 +915,10 @@ export default function AdminDashboard() {
                         <div className="flex-grow">
                           <p className="font-medium text-lg text-foreground">{item.product?.name || 'Unknown Product'}</p>
                           <p className="text-sm text-muted-foreground">
-                            {item.quantity} x {item.weight}g @ {formatPrice(item.product?.pricePerWeight?.[item.weight] || 0)} each
+                            {item.quantity} x {item.weight}g @ {formatPrice(item.unitPrice || item.product?.pricePerWeight?.[item.weight] || 0)} each
                           </p>
                           <p className="font-semibold text-sm mt-1">
-                            Total: {formatPrice(item.quantity * (item.product?.pricePerWeight?.[item.weight] || 0))}
+                            Total: {formatPrice(item.quantity * (item.unitPrice || item.product?.pricePerWeight?.[item.weight] || 0))}
                           </p>
                         </div>
                       </li>
@@ -867,9 +944,10 @@ export default function AdminDashboard() {
                     'text-purple-800': selectedOrder.order_status === 'shipped',
                     'text-green-800': selectedOrder.order_status === 'delivered',
                     'text-red-800': selectedOrder.order_status === 'cancelled',
-                    'text-gray-800': selectedOrder.order_status === 'refunded',
+                    'text-gray-800': selectedOrder.order_status === 'refunded' || selectedOrder.order_status === 'cancelled_and_refunded',
                   }
-                )}>{selectedOrder.order_status.charAt(0).toUpperCase() + selectedOrder.order_status.slice(1)}</span></p>
+                )}>{selectedOrder.order_status.charAt(0).toUpperCase() + selectedOrder.order_status.slice(1).replace(/_/g, ' ')}</span></p>
+                {/* Add a full history timeline here if your backend provides a `history` array */}
               </section>
 
               <hr className="my-4" />
@@ -884,12 +962,12 @@ export default function AdminDashboard() {
 
               <hr className="my-4" />
 
-              {/* Action Buttons: Refund & Cancel */}
+              {/* Action Buttons: Refund & Cancel & Print */}
               <section className="flex flex-wrap gap-4 justify-end">
-                {selectedOrder.payment_method === 'razorpay' && selectedOrder.payment_id && selectedOrder.order_status !== 'cancelled' && selectedOrder.order_status !== 'refunded' && (
+                {selectedOrder.payment_method === 'razorpay' && selectedOrder.payment_id && !['cancelled', 'refunded', 'cancelled_and_refunded'].includes(selectedOrder.order_status) && (
                   <Button
                     onClick={() => handleRefund(selectedOrder.id, selectedOrder.payment_id!, selectedOrder.total_amount)}
-                    disabled={isRefunding || selectedOrder.order_status === 'delivered'}
+                    disabled={isRefunding || isCancelling || isPrintingSingle || selectedOrder.order_status === 'delivered'}
                     variant="destructive"
                   >
                     {isRefunding ? (
@@ -903,10 +981,10 @@ export default function AdminDashboard() {
                   </Button>
                 )}
 
-                {selectedOrder.order_status !== 'cancelled' && selectedOrder.order_status !== 'delivered' && selectedOrder.order_status !== 'refunded' && (
+                {!['cancelled', 'delivered', 'refunded', 'cancelled_and_refunded'].includes(selectedOrder.order_status) && (
                   <Button
                     onClick={() => handleCancelOrder(selectedOrder.id)}
-                    disabled={isCancelling || isRefunding}
+                    disabled={isCancelling || isRefunding || isPrintingSingle}
                     variant="outline"
                     className="border-red-500 text-red-500 hover:bg-red-50"
                   >
@@ -922,10 +1000,19 @@ export default function AdminDashboard() {
                 )}
 
                 <Button
-                  onClick={() => window.print()}
+                  onClick={() => selectedOrder && handlePrintSingleInvoice(selectedOrder.id, selectedOrder.order_id)}
                   variant="secondary"
+                  disabled={isPrintingSingle || isRefunding || isCancelling}
+                  className="flex items-center"
                 >
-                  Print Invoice/Packing Slip
+                  {isPrintingSingle ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Print Invoice/Packing Slip"
+                  )}
                 </Button>
               </section>
             </div>
