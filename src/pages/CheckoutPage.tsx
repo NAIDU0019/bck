@@ -26,6 +26,9 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 
+// Import the Loader2 icon from lucide-react
+import { Loader2 } from "lucide-react";
+
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Full Name is required"),
   email: z.string().email("Invalid email address"),
@@ -492,9 +495,16 @@ const CheckoutPage = () => {
                     )}
                   />
 
-                  {/* Submit Button */}
+                  {/* Submit Button with animation */}
                   <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? "Processing..." : "Place Order"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Place Order"
+                    )}
                   </Button>
                 </form>
               </Form>
