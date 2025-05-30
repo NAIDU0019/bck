@@ -33,25 +33,23 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isBestSeller = tags.includes("best-seller");
   const isPopular = tags.includes("popular");
 
-  const handleAdd = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!selectedWeight) return;
-    addItem(product, selectedWeight);
-    const button = e.currentTarget as HTMLButtonElement;
-    button.classList.add("animate-ping-once");
-    setTimeout(() => {
-      button.classList.remove("animate-ping-once");
-    }, 300);
-  };
+  // Track if user clicks "Buy Now" or just "Add"
+  const [buyNowClicked, setBuyNowClicked] = useState(false);
 
-  const handleBuyNow = (e: React.MouseEvent) => {
+  const handleButtonClick = (e: React.MouseEvent, buyNow = false) => {
     e.preventDefault();
     if (!selectedWeight) return;
+
     addItem(product, selectedWeight);
-    navigate("/checkout");
+    setBuyNowClicked(buyNow);
+
     const button = e.currentTarget as HTMLButtonElement;
     button.classList.add("animate-ping-once");
     setTimeout(() => button.classList.remove("animate-ping-once"), 300);
+
+    if (buyNow) {
+      navigate("/checkout");
+    }
   };
 
   const renderTags = (tags: string[]) =>
@@ -156,23 +154,18 @@ export default function ProductCard({ product }: ProductCardProps) {
                   <div>
                     <span className="text-2xl font-bold text-pickle-700">{formatPrice(price)}</span>
                     {stock > 0 && stock < 15 && (
-                      <p className="text-xs text-red-600 mt-1">Only {stock} units left</p>
+                      <p className="text-xs text-red-600 mt-1 font-semibold">
+                        Only {stock} unit{stock > 1 ? "s" : ""} left
+                      </p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div>
                     <Button
-                      onClick={handleBuyNow}
-                      variant="outline"
-                      className="text-pickle-600 border-pickle-600 hover:bg-pickle-50 hover:text-pickle-700 transition-transform hover:-translate-y-0.5 active:translate-y-0"
+                      onClick={(e) => handleButtonClick(e, true)}
+                      className="bg-pickle-600 hover:bg-pickle-700 w-full text-white font-semibold transition-transform hover:-translate-y-0.5 active:translate-y-0"
                     >
+                      <ShoppingCart className="h-5 w-5 mr-2 inline-block" />
                       Buy Now
-                    </Button>
-                    <Button
-                      onClick={handleAdd}
-                      className="bg-pickle-600 hover:bg-pickle-700 transition-transform hover:-translate-y-0.5 active:translate-y-0"
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Add to Cart
                     </Button>
                   </div>
                 </div>
@@ -227,37 +220,44 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {weightOptions.length > 0 && (
-          <select
-            value={selectedWeight}
-            onChange={(e) => setSelectedWeight(e.target.value)}
-            className="mb-3 p-2 border rounded-md text-sm hover:border-pickle-300 focus:border-pickle-500 focus:ring-1 focus:ring-pickle-200 transition-colors"
-          >
+          <div className="mb-3 flex gap-2 flex-wrap">
             {weightOptions.map((w) => (
-              <option key={w} value={w}>
+              <button
+                key={w}
+                onClick={() => setSelectedWeight(w)}
+                className={`px-3 py-1 rounded-full text-sm border transition-all ${
+                  selectedWeight === w
+                    ? "bg-pickle-600 text-white border-pickle-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-pickle-50 hover:border-pickle-200"
+                }`}
+              >
                 {w}g - {formatPrice(pricePerWeight[w])}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         )}
 
-        <div className="mt-auto flex items-center justify-between">
-          <span className="text-xl font-bold text-pickle-700">{formatPrice(price)}</span>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleAdd}
-              className="bg-pickle-600 hover:bg-pickle-700 transition-transform hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Add
-            </Button>
-            <Button
-              onClick={handleBuyNow}
-              variant="outline"
-              className="text-pickle-600 border-pickle-600 hover:bg-pickle-50 hover:text-pickle-700 transition-transform hover:-translate-y-0.5 active:translate-y-0"
-            >
-              Buy
-            </Button>
-          </div>
+        {stock > 0 && stock < 15 && (
+          <p className="text-xs text-red-600 font-semibold mb-2">
+            Only {stock} unit{stock > 1 ? "s" : ""} left
+          </p>
+        )}
+
+        <div className="mt-auto">
+          <Button
+            onClick={(e) => handleButtonClick(e)}
+            className="w-full bg-pickle-600 hover:bg-pickle-700 text-white font-semibold transition-transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Add to Cart
+          </Button>
+          <Button
+            onClick={(e) => handleButtonClick(e, true)}
+            variant="outline"
+            className="mt-2 w-full text-pickle-600 border-pickle-600 hover:bg-pickle-50 hover:text-pickle-700 font-semibold transition-transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+          >
+            Buy Now
+          </Button>
         </div>
       </CardContent>
     </Card>
