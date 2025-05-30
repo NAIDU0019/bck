@@ -3,7 +3,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +16,101 @@ interface CartDrawerProps {
   onClose: () => void;
 }
 
+interface CartItemProps {
+  productId: string;
+  selectedWeight: number;
+  quantity: number;
+  productName: string;
+  productImage: string;
+  pricePerWeight: Record<number, number> | undefined;
+  updateQuantity: (
+    productId: string,
+    newQuantity: number,
+    selectedWeight: number
+  ) => void;
+  removeItem: (productId: string, selectedWeight: number) => void;
+}
+
+function CartItem({
+  productId,
+  selectedWeight,
+  quantity,
+  productName,
+  productImage,
+  pricePerWeight,
+  updateQuantity,
+  removeItem,
+}: CartItemProps) {
+  const itemPrice = pricePerWeight?.[selectedWeight] || 0;
+
+  return (
+    <div key={`${productId}-${selectedWeight}`} className="mb-6">
+      <div className="flex gap-4 items-center">
+        <div className="w-20 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0 border border-gray-200">
+          <img
+            src={productImage}
+            alt={productName}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col justify-between">
+          <div>
+            <h3 className="font-semibold text-lg leading-tight">{productName}</h3>
+            <p className="text-sm text-muted-foreground">{selectedWeight}g</p>
+          </div>
+
+          <div className="flex justify-between items-center mt-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 p-0 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={() =>
+                  quantity > 1 &&
+                  updateQuantity(productId, quantity - 1, selectedWeight)
+                }
+                disabled={quantity === 1}
+                aria-label="Decrease quantity"
+              >
+                <MinusCircle className="h-5 w-5" />
+              </Button>
+
+              <span className="w-8 text-center font-medium">{quantity}</span>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 p-0"
+                onClick={() =>
+                  updateQuantity(productId, quantity + 1, selectedWeight)
+                }
+                aria-label="Increase quantity"
+              >
+                <PlusCircle className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="text-right flex items-center gap-2">
+              <p className="font-semibold text-lg">{formatPrice(itemPrice * quantity)}</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => removeItem(productId, selectedWeight)}
+                aria-label="Remove item"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, removeItem, updateQuantity, clearCart, total } = useCart();
   const navigate = useNavigate();
@@ -27,104 +121,69 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md">
+    <Sheet
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <SheetContent className="w-full sm:max-w-md flex flex-col">
         <SheetHeader>
-          <SheetTitle className="text-2xl font-display">Your Cart</SheetTitle>
+          <SheetTitle className="text-3xl font-display mb-4">Your Cart</SheetTitle>
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-8">
-            <p className="text-muted-foreground mb-4">Your cart is empty</p>
-            <Button onClick={onClose}>Continue Shopping</Button>
+          <div className="flex flex-col items-center justify-center flex-grow py-12 gap-6">
+            <p className="text-muted-foreground text-lg">Your cart is empty</p>
+            <Button onClick={onClose} size="lg">
+              Continue Shopping
+            </Button>
           </div>
         ) : (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto custom-scroll py-4">
-              {items.map((item) => {
-                const selectedWeight = item.weight;
-                const itemPrice =
-                  item.product.pricePerWeight?.[selectedWeight] || 0;
-
-                return (
-                  <div key={`${item.product.id}-${selectedWeight}`} className="mb-4">
-                    <div className="flex gap-4">
-                      <div className="w-20 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium">{item.product.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedWeight}g
-                        </p>
-                        <div className="flex justify-between items-center mt-2">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() =>
-                                updateQuantity(item.product.id, item.quantity - 1, selectedWeight)
-                              }
-                            >
-                              <MinusCircle className="h-4 w-4" />
-                            </Button>
-                            <span className="w-6 text-center">{item.quantity}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() =>
-                                updateQuantity(item.product.id, item.quantity + 1, selectedWeight)
-                              }
-                            >
-                              <PlusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              {formatPrice(itemPrice * item.quantity)}
-                            </p>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                              onClick={() => removeItem(item.product.id, selectedWeight)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <Separator className="my-4" />
-                  </div>
-                );
-              })}
+          <>
+            <div className="flex-1 overflow-y-auto custom-scroll py-4 px-1 min-h-[300px]">
+              {items.map((item) => (
+                <CartItem
+                  key={`${item.product.id}-${item.weight}`}
+                  productId={item.product.id}
+                  selectedWeight={item.weight}
+                  quantity={item.quantity}
+                  productName={item.product.name}
+                  productImage={item.product.image}
+                  pricePerWeight={item.product.pricePerWeight}
+                  updateQuantity={updateQuantity}
+                  removeItem={removeItem}
+                />
+              ))}
             </div>
 
-            <div className="pt-4 border-t">
-              <div className="flex justify-between mb-2">
+            <div className="pt-6 border-t border-gray-200 px-2">
+              <div className="flex justify-between text-lg mb-3">
                 <span>Subtotal</span>
-                <span className="font-medium">{formatPrice(total)}</span>
+                <span className="font-semibold">{formatPrice(total)}</span>
               </div>
-              <div className="flex justify-between mb-4">
+              <div className="flex justify-between text-sm text-muted-foreground mb-6">
                 <span>Shipping</span>
                 <span>Calculated at checkout</span>
               </div>
-              <Button className="w-full mb-2 gap-2" onClick={handleCheckout}>
-                <ShoppingBag className="h-4 w-4" />
+              <Button
+                className="w-full mb-3 gap-2"
+                onClick={handleCheckout}
+                size="lg"
+              >
+                <ShoppingBag className="h-5 w-5" />
                 Proceed to Checkout
               </Button>
-              <Button variant="outline" className="w-full" onClick={clearCart}>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={clearCart}
+                size="lg"
+              >
                 Clear Cart
               </Button>
             </div>
-          </div>
+          </>
         )}
       </SheetContent>
     </Sheet>
