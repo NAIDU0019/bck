@@ -118,7 +118,7 @@ app.use('/api/orders', orderRoutes(supabase, io)); // <--- Pass `io` here!
 // Pass Supabase client AND the Socket.IO instance to adminRoutes
 app.use('/api/admin', authenticateAdmin, adminRoutes(supabase, io)); // <--- Modified this line!
 // *****************************************
-app.use('/api/emails', emailRoutes(supabase));
+
 // Basic route to check if the server is running
 app.get('/', (req, res) => {
   res.send('ADHYAA PICKLES Backend API is running!');
