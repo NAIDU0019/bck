@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { toast } from "@/components/ui/sonner";
 
-// Product type
 export interface Product {
   id: string;
   name: string;
@@ -11,18 +10,16 @@ export interface Product {
   description: string;
   ingredients?: string;
   pricePerWeight: {
-    [weight: string]: number; // e.g., "250": 199
+    [weight: string]: number;
   };
 }
 
-// Cart item type
 interface CartItem {
   product: Product;
-  weight: string; // selected variant like "250", "500", "1000"
+  weight: string;
   quantity: number;
 }
 
-// Context shape
 interface CartContextType {
   items: CartItem[];
   addItem: (product: Product, weight: string, quantity?: number) => void;
@@ -34,14 +31,26 @@ interface CartContextType {
   updateItemQuantity: (productId: string, quantity: number) => void;
 }
 
-// Create context
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Provider
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+const CART_STORAGE_KEY = "myapp_cart";
 
-  // Add item
+export function CartProvider({ children }: { children: ReactNode }) {
+  // Load cart from localStorage or empty array
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(CART_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save to localStorage whenever items change
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
   const addItem = (product: Product, weight: string, quantity = 1) => {
     setItems((prevItems) => {
       const existingItem = prevItems.find(
@@ -62,7 +71,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Remove item
   const removeItem = (productId: string, weight: string) => {
     setItems((prevItems) => {
       const itemToRemove = prevItems.find(
@@ -77,7 +85,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Update quantity
   const updateQuantity = (productId: string, weight: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(productId, weight);
@@ -93,7 +100,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Update item quantity
   const updateItemQuantity = (productId: string, quantity: number) => {
     setItems((prevItems) =>
       prevItems.map((item) =>
@@ -102,16 +108,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Clear cart
   const clearCart = () => {
     setItems([]);
     toast.info("Cart cleared");
   };
 
-  // Total quantity of items
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
 
-  // Total price based on selected weight
   const total = items.reduce((sum, item) => {
     const priceForWeight = item.product.pricePerWeight[item.weight] || 0;
     return sum + priceForWeight * item.quantity;
@@ -135,7 +138,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook for consuming cart context
 export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {
