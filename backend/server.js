@@ -14,7 +14,7 @@ const sendEmailRouter = require("./routes/sendEmail");
 // If it's 'admin.js', change it to require('./routes/admin').
 const adminRoutes = require('./routes/adminRoutes'); // Assuming adminRoutes.js is the filename
 const orderRoutes = require('./routes/orderRoutes'); // This will now accept `io` as an argument
-const emailRoutes = require('./routes/emailRoutes');
+
 const app = express();
 const server = http.createServer(app); // Create an HTTP server using your Express app
 const PORT = process.env.PORT || 5000;
