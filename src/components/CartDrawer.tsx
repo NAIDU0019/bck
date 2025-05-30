@@ -25,10 +25,10 @@ interface CartItemProps {
   pricePerWeight: Record<number, number> | undefined;
   updateQuantity: (
     productId: string,
-    newQuantity: number,
-    selectedWeight: number
+    weight: string,
+    quantity: number
   ) => void;
-  removeItem: (productId: string, selectedWeight: number) => void;
+  removeItem: (productId: string, weight: string) => void;
 }
 
 function CartItem({
@@ -69,7 +69,7 @@ function CartItem({
                 className="h-7 w-7 p-0 disabled:opacity-50 disabled:pointer-events-none"
                 onClick={() =>
                   quantity > 1 &&
-                  updateQuantity(productId, quantity - 1, selectedWeight)
+                  updateQuantity(productId, selectedWeight.toString(), quantity - 1)
                 }
                 disabled={quantity === 1}
                 aria-label="Decrease quantity"
@@ -84,7 +84,7 @@ function CartItem({
                 size="icon"
                 className="h-7 w-7 p-0"
                 onClick={() =>
-                  updateQuantity(productId, quantity + 1, selectedWeight)
+                  updateQuantity(productId, selectedWeight.toString(), quantity + 1)
                 }
                 aria-label="Increase quantity"
               >
@@ -98,7 +98,7 @@ function CartItem({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                onClick={() => removeItem(productId, selectedWeight)}
+                onClick={() => removeItem(productId, selectedWeight.toString())}
                 aria-label="Remove item"
               >
                 <Trash2 className="h-5 w-5" />
@@ -146,7 +146,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <CartItem
                   key={`${item.product.id}-${item.weight}`}
                   productId={item.product.id}
-                  selectedWeight={item.weight}
+                  selectedWeight={Number(item.weight)} // convert weight to number
                   quantity={item.quantity}
                   productName={item.product.name}
                   productImage={item.product.image}
