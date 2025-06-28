@@ -82,6 +82,25 @@ const ProductDetailPage = () => {
     { id: 2, author: "Rahul K.", rating: 5, comment: "Authentic taste, highly recommend the mango pickle." },
     { id: 3, author: "Priya S.", rating: 3, comment: "Good, but a bit too salty for my taste." },
   ];
+  const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  image: `https://www.adhyaapickles.in${product.image}`,
+  description: product.description,
+  brand: {
+    '@type': 'Brand',
+    name: 'Adhyaa Pickles',
+  },
+  offers: {
+    '@type': 'Offer',
+    priceCurrency: 'INR',
+    price: product.pricePerWeight[selectedWeight],
+    availability: 'https://schema.org/InStock',
+    itemCondition: 'https://schema.org/NewCondition',
+  },
+};
+
 
   // Calculate average rating
   const averageRating = reviews.length > 0
@@ -91,9 +110,13 @@ const ProductDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>{product.name} - ADHYAA PICKLES</title>
-        <meta name="description" content={product.description} />
-      </Helmet>
+  <title>{product.name} - ADHYAA PICKLES</title>
+  <meta name="description" content={product.description} />
+  <script type="application/ld+json">
+    {JSON.stringify(structuredData)}
+  </script>
+</Helmet>
+
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow py-8">
