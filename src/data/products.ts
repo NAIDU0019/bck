@@ -31,7 +31,7 @@ const veryLimitedStock = { "100": 5, "250": 9, "500": 30, "1000": 30 };
 
 export const products: Product[] = [
   {
-    id: "1",
+    id: "mango-pickle",
     name: "Mango Pickle",
     image: "/mango.jpeg",
     category: "fruit",
@@ -43,7 +43,7 @@ export const products: Product[] = [
     tagline: "Tantalize your taste buds with our tangy mango magic!",
   },
   {
-    id: "2",
+    id: "lemon-pickle",
     name: "Lemon Pickle",
     image: "/lemon.jpg",
     category: "fruit",
@@ -55,7 +55,7 @@ export const products: Product[] = [
     tagline: "When life gives you lemons, pickle them to perfection!",
   },
   {
-    id: "3",
+    id: "mixed-vegetable-pickle",
     name: "Mixed Vegetable Pickle",
     image: "/mixveg.jpg",
     category: "vegetable",
@@ -67,7 +67,7 @@ export const products: Product[] = [
     tagline: "Color, crunch, and spice in every bite!",
   },
   {
-    id: "4",
+    id: "garlic-pickle",
     name: "Garlic Pickle",
     image: "/garlic.jpg",
     category: "vegetable",
@@ -79,7 +79,7 @@ export const products: Product[] = [
     tagline: "Garlic lovers, rejoice in every pungent punch!",
   },
   {
-    id: "5",
+    id: "chicken-pickle",
     name: "Chicken Pickle",
     image: "/chicken.jpeg",
     category: "non-veg",
@@ -91,7 +91,7 @@ export const products: Product[] = [
     tagline: "Bold bites of Andhra-style chicken in every jar!",
   },
   {
-    id: "6",
+    id: "fish-pickle",
     name: "Fish Pickle",
     image: "/fish.jpg",
     category: "non-veg",
@@ -103,7 +103,7 @@ export const products: Product[] = [
     tagline: "Catch the coastal kick with every spoon!",
   },
   {
-    id: "7",
+    id: "green-chili-pickle",
     name: "Green Chili Pickle",
     image: "/gchilli.jpg",
     category: "vegetable",
@@ -115,7 +115,7 @@ export const products: Product[] = [
     tagline: "For those who like it hot and tangy!",
   },
   {
-    id: "8",
+    id: "prawn-pickle",
     name: "Prawn Pickle",
     image: "/prawns.jpg",
     category: "non-veg",
@@ -127,7 +127,7 @@ export const products: Product[] = [
     tagline: "A sea of spice in every bite!",
   },
   {
-    id: "9",
+    id: "ginger-pickle",
     name: "Ginger Pickle",
     image: "/ginger.jpg",
     category: "vegetable",
@@ -139,7 +139,7 @@ export const products: Product[] = [
     tagline: "Spice up your gut with a zingy twist!",
   },
   {
-    id: "10",
+    id: "mutton-pickle",
     name: "Mutton Pickle",
     image: "/mutton.jpeg",
     category: "non-veg",
@@ -151,7 +151,7 @@ export const products: Product[] = [
     tagline: "Bold, rich and meaty – the perfect indulgence!",
   },
   {
-    id: "13",
+    id: "crab-pickle",
     name: "Crab Pickle",
     image: "/crab.jpg",
     category: "seafood",
@@ -163,7 +163,7 @@ export const products: Product[] = [
     tagline: "Dive into oceanic delight with every spicy claw!",
   },
   {
-    id: "14",
+    id: "gongura-chicken-pickle",
     name: "Gongura Chicken Pickle",
     image: "/gchicken.jpg",
     category: "meat",
@@ -175,7 +175,7 @@ export const products: Product[] = [
     tagline: "Tang meets spice in every bite!",
   },
   {
-    id: "15",
+    id: "dry-mango-pickle",
     name: "Dry Mango Pickle",
     image: "/dmango.jpeg",
     category: "fruit",
@@ -187,7 +187,7 @@ export const products: Product[] = [
     tagline: "Sun-kissed mango magic in every jar!",
   },
   {
-    id: "16",
+    id: "tomato-pickle",
     name: "Tomato Pickle",
     image: "/tomato.jpg",
     category: "vegetable",
