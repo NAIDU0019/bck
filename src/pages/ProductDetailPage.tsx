@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,14 +11,13 @@ import { ShoppingCart, Minus, Plus, ChevronLeft, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/utils";
 import { products } from "@/data/products";
-// import ProductList from "@/components/ProductList"; // Not directly used in this file's render, but good to keep if used elsewhere
-import toast from "react-hot-toast"; // Import toast for notifications
+import toast from "react-hot-toast";
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
   const product = products.find((p) => p.id === id);
 
@@ -54,21 +53,20 @@ const ProductDetailPage = () => {
 
   const handleAddToCart = () => {
     addItem(product, selectedWeight, quantity);
-    toast.success(${quantity} x ${product.name} (${selectedWeight}g) added to cart!, {
+    toast.success(`${quantity} x ${product.name} (${selectedWeight}g) added to cart!`, {
       position: "bottom-right",
       duration: 3000,
     });
   };
 
   const handleBuyNow = () => {
-    addItem(product, selectedWeight, quantity); // Add to cart first
-    toast.success(${quantity} x ${product.name} (${selectedWeight}g) added to cart! Redirecting to checkout..., {
+    addItem(product, selectedWeight, quantity);
+    toast.success(`${quantity} x ${product.name} (${selectedWeight}g) added to cart! Redirecting to checkout...`, {
       position: "bottom-right",
       duration: 2000,
     });
-    // Simulate redirection to a checkout page
     setTimeout(() => {
-      navigate("/checkout"); // Replace with your actual checkout path
+      navigate("/checkout");
     }, 1000);
   };
 
@@ -76,46 +74,45 @@ const ProductDetailPage = () => {
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
-  // Static review data for demonstration
   const reviews = [
     { id: 1, author: "Swati", rating: 4, comment: "Delicious and spicy! Reminds me of home." },
     { id: 2, author: "Rahul K.", rating: 5, comment: "Authentic taste, highly recommend the mango pickle." },
     { id: 3, author: "Priya S.", rating: 3, comment: "Good, but a bit too salty for my taste." },
   ];
+
   const structuredData = {
-  '@context': 'https://schema.org',
-  '@type': 'Product',
-  name: product.name,
-  image: https://www.adhyaapickles.in${product.image},
-  description: product.description,
-  brand: {
-    '@type': 'Brand',
-    name: 'Adhyaa Pickles',
-  },
-  offers: {
-    '@type': 'Offer',
-    priceCurrency: 'INR',
-    price: product.pricePerWeight[selectedWeight],
-    availability: 'https://schema.org/InStock',
-    itemCondition: 'https://schema.org/NewCondition',
-  },
-};
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: `https://www.adhyaapickles.in${product.image}`,
+    description: product.description,
+    brand: {
+      "@type": "Brand",
+      name: "Adhyaa Pickles",
+    },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "INR",
+      price: product.pricePerWeight[selectedWeight],
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+    },
+  };
 
-
-  // Calculate average rating
-  const averageRating = reviews.length > 0
-    ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length)
-    : 0;
+  const averageRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
 
   return (
     <>
       <Helmet>
-  <title>{product.name} - ADHYAA PICKLES</title>
-  <meta name="description" content={product.description} />
-  <script type="application/ld+json">
-    {JSON.stringify(structuredData)}
-  </script>
-</Helmet>
+        <title>{product.name} - ADHYAA PICKLES</title>
+        <meta name="description" content={product.description} />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
 
       <div className="flex flex-col min-h-screen">
         <Navbar />
@@ -214,27 +211,27 @@ const ProductDetailPage = () => {
               </div>
             </div>
 
-            {/* Tabs */}
             <Tabs defaultValue="description" className="mb-16">
               <TabsList className="mb-6">
-                <TabsTrigger value="description" aria-controls="description-tab-panel">Description</TabsTrigger>
-                <TabsTrigger value="ingredients" aria-controls="ingredients-tab-panel">Ingredients</TabsTrigger>
-                <TabsTrigger value="reviews" aria-controls="reviews-tab-panel">Reviews ({reviews.length})</TabsTrigger>
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+                <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
               </TabsList>
-              <TabsContent value="description" id="description-tab-panel" role="tabpanel" tabIndex={0} className="bg-white p-6 rounded-lg shadow-sm">
+
+              <TabsContent value="description" className="bg-white p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-semibold mb-4">Product Description</h3>
                 <p className="mb-4">{product.description}</p>
-                <p>
-                  Our pickles are handcrafted in small batches using traditional methods and premium ingredients.
-                </p>
+                <p>Our pickles are handcrafted in small batches using traditional methods and premium ingredients.</p>
                 <h4 className="text-lg font-semibold mt-6 mb-3">Storage Instructions</h4>
                 <p>Store in a cool, dry place. Refrigerate after opening and consume within 6 months.</p>
               </TabsContent>
-              <TabsContent value="ingredients" id="ingredients-tab-panel" role="tabpanel" tabIndex={0} className="bg-white p-6 rounded-lg shadow-sm">
+
+              <TabsContent value="ingredients" className="bg-white p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-semibold mb-4">Ingredients</h3>
                 <p>{product.ingredients}</p>
               </TabsContent>
-              <TabsContent value="reviews" id="reviews-tab-panel" role="tabpanel" tabIndex={0} className="bg-white p-6 rounded-lg shadow-sm">
+
+              <TabsContent value="reviews" className="bg-white p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
                 {reviews.length > 0 ? (
                   <div className="space-y-4">
@@ -258,18 +255,15 @@ const ProductDetailPage = () => {
                 ) : (
                   <p className="text-muted-foreground">No reviews yet. Be the first to review this product!</p>
                 )}
-                {/* You can add a review submission form here */}
-                {/* <Button className="mt-4">Write a Review</Button> */}
               </TabsContent>
             </Tabs>
 
-            {/* Related products */}
             {relatedProducts.length > 0 && (
               <div>
                 <h2 className="text-2xl font-display font-bold mb-6">You Might Also Like</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {relatedProducts.map((relatedProduct) => (
-                    <Link key={relatedProduct.id} to={/product/${relatedProduct.id}}>
+                    <Link key={relatedProduct.id} to={`/product/${relatedProduct.id}`}>
                       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                         <div className="aspect-square overflow-hidden">
                           <img
@@ -280,7 +274,6 @@ const ProductDetailPage = () => {
                         </div>
                         <div className="p-4">
                           <h3 className="font-medium">{relatedProduct.name}</h3>
-                          {/* Displaying price of the smallest weight for related products */}
                           <p className="text-muted-foreground text-sm mb-1">
                             Starting from {formatPrice(Object.values(relatedProduct.pricePerWeight)[0])}
                           </p>
@@ -294,7 +287,6 @@ const ProductDetailPage = () => {
             )}
           </div>
         </main>
-
         <Footer />
       </div>
     </>
