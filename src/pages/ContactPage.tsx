@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
@@ -31,34 +31,51 @@ const ContactPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form validation
+
     if (!formData.name || !formData.email || !formData.message) {
       toast.error("Please fill in all required fields.");
       return;
     }
-    
-    // This would be replaced with an actual API call in a real implementation
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    });
+
+    try {
+      const response = await fetch("https://formspree.io/f/xnnvlwbn", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success("Message sent successfully! We'll get back to you soon.");
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        });
+      } else {
+        toast.error(result?.message || "Something went wrong. Please try again later.");
+      }
+    } catch (error) {
+      toast.error("Something went wrong. Please try again later.");
+    }
   };
 
   return (
     <>
-      <Head 
+      <Head
         title="Contact Us - ADHYAA PICKLES"
         description="Get in touch with ADHYAA PICKLES for inquiries, feedback, or orders. We'd love to hear from you!"
       />
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow">
-          {/* Hero section */}
           <div className="hero-pattern py-16">
             <div className="container mx-auto px-4 text-center">
               <h1 className="text-4xl md:text-5xl font-display font-bold mb-6">
@@ -70,7 +87,6 @@ const ContactPage = () => {
             </div>
           </div>
 
-          {/* Contact content */}
           <section className="py-16">
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
@@ -100,7 +116,7 @@ const ContactPage = () => {
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-foreground">
-                      Name:Dasari Yesebu<br />
+                      Name: Dasari Yesebu<br />
                       Customer Service: +91 7995960659<br />
                       Orders & Inquiries: +91 7995960659<br />
                       Business: +91 7995960659
@@ -119,7 +135,7 @@ const ContactPage = () => {
                     <CardDescription className="text-foreground">
                       General Inquiries: tech.adhyaapickles@gmail.com<br />
                       Customer Support: tech.adhyaapickles@gmail.com<br />
-                      Orders:           tech.adhyaapickles@gmail.com
+                      Orders: tech.adhyaapickles@gmail.com
                     </CardDescription>
                   </CardContent>
                 </Card>
@@ -233,7 +249,6 @@ const ContactPage = () => {
 
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="aspect-[16/6] w-full">
-                  {/* This would be replaced with an actual Google Maps embed in a real implementation */}
                   <div className="w-full h-full bg-muted flex items-center justify-center">
                     <p className="text-muted-foreground">Map Placeholder</p>
                   </div>
