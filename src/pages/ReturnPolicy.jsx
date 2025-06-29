@@ -80,7 +80,7 @@ const ReturnPolicy = () => {
           <ul className="list-disc ml-6">
             <li><strong>Replacement:</strong> A free replacement of the affected product.</li>
             <li><strong>Refund:</strong> Full refund to your original payment method.</li>
-            <li><strong>Timeline:</strong> Refunds are credited within <strong>7–10 business days</strong>. Replacements are processed within <strong>7 business days</strong>.</li>
+            <li><strong>Timeline:</strong> Refunds are credited within <strong>7–10 business days</strong>. Replacements are Delivered within <strong>7 business days</strong>.</li>
           </ul>
         </section>
 
