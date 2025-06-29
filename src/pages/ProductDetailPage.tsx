@@ -21,19 +21,18 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
 
   const product = products.find((p) => p.id === id);
-
   const [selectedWeight, setSelectedWeight] = useState<string>(
     product ? Object.keys(product.pricePerWeight)[0] : ""
   );
 
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState<number>(0);
 
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         const res = await axios.get(`/api/products/${id}/reviews`);
-        const fetchedReviews = res.data.reviews;
+        const fetchedReviews = res.data?.reviews || [];
 
         setReviews(fetchedReviews);
 
@@ -47,6 +46,7 @@ const ProductDetailPage = () => {
         }
       } catch (err) {
         console.error("Error fetching reviews:", err);
+        setReviews([]); // Safe fallback
       }
     };
 
@@ -70,31 +70,23 @@ const ProductDetailPage = () => {
   }
 
   const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
+    "@context": "https://schema.org",
+    "@type": "Product",
     name: product.name,
     image: `https://www.adhyaapickles.in${product.image}`,
     description: product.description,
-    brand: {
-      '@type': 'Brand',
-      name: 'Adhyaa Pickles',
-    },
+    brand: { "@type": "Brand", name: "Adhyaa Pickles" },
     offers: {
-      '@type': 'Offer',
-      priceCurrency: 'INR',
+      "@type": "Offer",
+      priceCurrency: "INR",
       price: product.pricePerWeight[selectedWeight],
-      availability: 'https://schema.org/InStock',
-      itemCondition: 'https://schema.org/NewCondition',
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
     },
   };
 
-  const decreaseQuantity = () => {
-    if (quantity > 1) setQuantity(quantity - 1);
-  };
-
-  const increaseQuantity = () => {
-    setQuantity(quantity + 1);
-  };
+  const decreaseQuantity = () => quantity > 1 && setQuantity(quantity - 1);
+  const increaseQuantity = () => setQuantity(quantity + 1);
 
   const handleAddToCart = () => {
     addItem(product, selectedWeight, quantity);
@@ -110,9 +102,7 @@ const ProductDetailPage = () => {
       position: "bottom-right",
       duration: 2000,
     });
-    setTimeout(() => {
-      navigate("/checkout");
-    }, 1000);
+    setTimeout(() => navigate("/checkout"), 1000);
   };
 
   const relatedProducts = products
@@ -124,9 +114,7 @@ const ProductDetailPage = () => {
       <Helmet>
         <title>{product.name} - ADHYAA PICKLES</title>
         <meta name="description" content={product.description} />
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <div className="flex flex-col min-h-screen">
@@ -143,11 +131,7 @@ const ProductDetailPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
               <div className="bg-white p-6 rounded-lg shadow-sm">
                 <div className="aspect-square overflow-hidden rounded-md bg-muted">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
                 </div>
               </div>
 
@@ -167,7 +151,7 @@ const ProductDetailPage = () => {
                       />
                     ))}
                   </div>
-                  <span className="text-sm text-muted-foreground">({reviews.length} reviews)</span>
+                  <span className="text-sm text-muted-foreground">({(reviews || []).length} reviews)</span>
                 </div>
 
                 <div className="mb-4">
@@ -233,7 +217,7 @@ const ProductDetailPage = () => {
               <TabsList className="mb-6">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+                <TabsTrigger value="reviews">Reviews ({(reviews || []).length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="description" className="bg-white p-6 rounded-lg shadow-sm">
@@ -251,9 +235,9 @@ const ProductDetailPage = () => {
 
               <TabsContent value="reviews" className="bg-white p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
-                {reviews.length > 0 ? (
+                {(reviews || []).length > 0 ? (
                   <div className="space-y-4">
-                    {reviews.map((review: any) => (
+                    {(reviews || []).map((review: any) => (
                       <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
                         <div className="flex items-center mb-1">
                           {[...Array(5)].map((_, i) => (
