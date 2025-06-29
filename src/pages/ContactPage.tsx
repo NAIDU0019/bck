@@ -100,9 +100,10 @@ const ContactPage = () => {
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-foreground">
-                      Customer Service: +91 **********<br />
-                      Orders & Inquiries: +91 **********<br />
-                      Business: +91 **********
+                      Name:Dasari Yesebu
+                      Customer Service: +91 7995960659<br />
+                      Orders & Inquiries: +91 7995960659<br />
+                      Business: +91 7995960659
                     </CardDescription>
                   </CardContent>
                 </Card>
