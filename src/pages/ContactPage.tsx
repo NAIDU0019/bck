@@ -100,7 +100,7 @@ const ContactPage = () => {
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-foreground">
-                      Name:Dasari Yesebu
+                      Name:Dasari Yesebu<br />
                       Customer Service: +91 7995960659<br />
                       Orders & Inquiries: +91 7995960659<br />
                       Business: +91 7995960659
