@@ -1,66 +1,77 @@
-// routes/phonepeWebhook.js
+// ✅ File: backend/routes/phonepeWebhook.js
+
 const express = require("express");
 const crypto = require("crypto");
+const axios = require("axios");
 
 module.exports = (supabase) => {
   const router = express.Router();
 
   router.post("/", async (req, res) => {
     try {
-      const rawBody = req.body.toString(); // Raw body from express.raw()
-      const xVerify = req.headers["x-verify"];
-      const [signature, saltIndex] = xVerify.split("###");
+      const body = JSON.parse(req.body);
+      const { code, data } = body;
 
-      const expectedSignature = crypto
-        .createHash("sha256")
-        .update(rawBody + process.env.PHONEPE_CLIENT_SECRET)
-        .digest("hex");
+      console.log("📦 PhonePe Webhook Received:", body);
 
-      if (signature !== expectedSignature) {
-        console.warn("❌ Webhook X-VERIFY mismatch");
-        return res.status(401).json({ message: "Invalid X-VERIFY" });
+      if (code !== "PAYMENT_SUCCESS") {
+        console.warn("❌ Payment not successful. Ignoring.");
+        return res.status(400).send("Ignored non-success payment.");
       }
 
-      const payload = JSON.parse(rawBody);
-      console.log("📦 PhonePe Callback Payload:", payload);
+      const transactionStatus = data?.status;
+      const orderId = data?.merchantOrderId;
 
-      // Extract transaction/order ID and status from payload
-      const transactionId = payload.data?.merchantTransactionId || payload.data?.transactionId;
-      const paymentStatus = payload.data?.status;
-
-      if (!transactionId || !paymentStatus) {
-        console.error("❌ Missing transactionId or paymentStatus in webhook payload");
-        return res.status(400).json({ message: "Invalid payload data" });
+      if (!orderId || transactionStatus !== "SUCCESS") {
+        return res.status(400).json({ message: "Invalid or incomplete webhook data" });
       }
 
-      // Map PhonePe payment status to order status
-      let orderStatus;
-      if (paymentStatus.toLowerCase() === "success") {
-        orderStatus = "paid";
-      } else if (paymentStatus.toLowerCase() === "failed") {
-        orderStatus = "failed";
-      } else {
-        orderStatus = "pending";
+      // Fetch temp order payload stored before redirect (optional optimization)
+      const { data: tempData, error: tempError } = await supabase
+        .from("temp_orders")
+        .select("*")
+        .eq("order_id", orderId)
+        .single();
+
+      if (tempError || !tempData) {
+        console.error("🚨 Could not fetch temp order data:", tempError);
+        return res.status(404).json({ message: "Temp order not found" });
       }
 
-      // Update order status in Supabase
-      const { data, error } = await supabase
-        .from("orders")
-        .update({ order_status: orderStatus })
-        .eq("order_id", transactionId);
+      // Now insert into main orders table
+      const orderPayload = {
+        orderId,
+        customerInfo: tempData.customer_info,
+        orderedItems: tempData.ordered_items,
+        totalAmount: tempData.total_amount,
+        paymentMethod: "phonepe",
+        paymentId: data.transactionId,
+        orderDetails: {
+          subtotal: tempData.subtotal,
+          discountAmount: tempData.discount_amount,
+          shippingCost: tempData.shipping_cost,
+          taxes: tempData.taxes,
+          additionalFees: tempData.additional_fees,
+        },
+        appliedCoupon: tempData.applied_coupon,
+      };
 
-      if (error) {
-        console.error("❌ Failed to update order status in DB:", error);
-        return res.status(500).json({ message: "Failed to update order status" });
-      }
+      const backendOrderPostUrl = `${process.env.BACKEND_URL}/api/orders`;
+      const headers = {
+        "Content-Type": "application/json",
+        "X-Applied-Coupon": tempData.applied_coupon?.code || ""
+      };
 
-      console.log(`✅ Order ${transactionId} status updated to ${orderStatus}`);
+      const placeOrder = await axios.post(backendOrderPostUrl, orderPayload, { headers });
+      console.log("✅ Order finalized and saved via /api/orders", placeOrder.data);
 
-      return res.status(200).json({ success: true });
+      // Cleanup temp order if needed
+      await supabase.from("temp_orders").delete().eq("order_id", orderId);
+
+      return res.status(200).send("Payment Success. Order saved.");
     } catch (err) {
-      console.error("❌ Webhook error:", err.message);
-      console.error(err.stack);
-      return res.status(500).json({ error: "Webhook processing failed" });
+      console.error("❌ Error handling PhonePe webhook:", err);
+      return res.status(500).json({ message: "Internal server error", error: err.message });
     }
   });
 
