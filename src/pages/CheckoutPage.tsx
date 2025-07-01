@@ -215,84 +215,92 @@ const CheckoutPage = () => {
   };
 
   // Function to send order data to backend (and trigger email from backend)
-  const sendOrderToBackend = async (data: CheckoutFormValues, paymentId?: string) => {
-    const newOrderId = `ADH-${Date.now()}`; // Generate orderId here if not already generated
+ const sendOrderToBackend = async (
+  data: CheckoutFormValues,
+  paymentId?: string,
+  status: "pending" | "paid" = "pending", // default is "pending" (COD)
+  customOrderId?: string // to reuse same orderId from localStorage
+) => {
+  const newOrderId = customOrderId || `ADH-${Date.now()}`; // Use custom if provided
 
-    try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-      const response = await fetch(`${backendUrl}/api/orders`, { // *** CHANGED ENDPOINT HERE ***
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Applied-Coupon": appliedCoupon?.code || ""
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+    const response = await fetch(`${backendUrl}/api/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Applied-Coupon": appliedCoupon?.code || "",
+      },
+      body: JSON.stringify({
+        orderId: newOrderId,
+        status, // ✅ NEW: pass "paid" or "pending"
+        customerInfo: {
+          fullName: data.fullName,
+          email: data.email,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          postalCode: data.postalCode,
+          phoneNumber: data.phoneNumber,
         },
-        body: JSON.stringify({
-          orderId: newOrderId, // Pass the generated orderId
-          customerInfo: {
-            fullName: data.fullName,
-            email: data.email,
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            postalCode: data.postalCode,
-            phoneNumber: data.phoneNumber,
+        orderedItems: items.map(item => ({
+          product: {
+            id: item.product.id,
+            name: item.product.name,
+            image: item.product.image,
+            pricePerWeight: item.product.pricePerWeight || { [item.weight]: item.unitPrice },
           },
-          orderedItems: items.map(item => ({
-            // This is the crucial change: Nest product details under a 'product' key
-            product: {
-              id: item.product.id,
-              name: item.product.name,
-              image: item.product.image,
-              // Ensure pricePerWeight is an object, even if it has only one entry
-              pricePerWeight: item.product.pricePerWeight || { [item.weight]: item.unitPrice }
-            },
-            weight: item.weight,
-            quantity: item.quantity,
-            // You can remove unitPrice here if it's already part of pricePerWeight
-            // or keep it if your backend specifically expects it at this level for other reasons
-            // unitPrice: item.product.pricePerWeight?.[item.weight] || 0,
-          })),
-          orderDetails: {
-            subtotal,
-            discountAmount,
-            taxes,
-            shippingCost,
-            additionalFees: ADDITIONAL_FEES,
-            finalTotal,
-          },
-          totalAmount: finalTotal, // This is the total amount used in the backend
-          paymentMethod: data.paymentMethod,
-          paymentId: paymentId || null,
-          appliedCoupon: appliedCoupon, // Pass the applied coupon object directly
-        }),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        console.error("Backend order submission failed:", responseData);
-        toast.error(responseData.message || "Failed to place order.");
-        return; // Stop further execution on error
-      }
-
-      toast.success("Order placed successfully!");
-      clearCart();
-      navigate("/checkout-success", {
-        state: {
-          customerInfo: { ...data, orderId: newOrderId },
-          orderedItems: items,
-          orderTotal: finalTotal,
-          orderId: newOrderId,
+          weight: item.weight,
+          quantity: item.quantity,
+        })),
+        orderDetails: {
+          subtotal,
+          discountAmount,
+          taxes,
+          shippingCost,
+          additionalFees: ADDITIONAL_FEES,
+          finalTotal,
         },
-      });
+        totalAmount: finalTotal,
+        paymentMethod: data.paymentMethod,
+        paymentId: paymentId || null,
+        appliedCoupon: appliedCoupon,
+      }),
+    });
 
-    } catch (error) {
-      console.error("Network or unexpected error during order submission:", error);
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false); // Re-enable button
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error("Backend order submission failed:", responseData);
+      toast.error(responseData.message || "Failed to place order.");
+      return;
     }
-  };
+
+    toast.success("Order placed successfully!");
+    clearCart();
+
+    // Save for PhonePe success redirect
+    localStorage.setItem("phonepe_orderId", newOrderId);
+
+    // Redirect to success page
+    navigate(`/checkout-success`, {
+      state: {
+        customerInfo: { ...data, orderId: newOrderId },
+        orderedItems: items,
+        orderTotal: finalTotal,
+        orderId: newOrderId,
+      },
+    });
+
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    toast.error("An unexpected error occurred. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // Handle form submission
   const onSubmit = async (data: CheckoutFormValues) => {
