@@ -50,10 +50,12 @@ const ADDITIONAL_FEES = 0; // Flat additional fees example
 
 // Define your coupons here. In a real application, these would likely come from a database.
 const COUPONS = [
-  { code: "ADH5", discountPercent: 0.05 }, // 5% discount (formerly 6%)
-  { code: "ADH10", discountPercent: 0.10 }, // 10% discount (formerly 12%)
-  { code: "FIRSTORDER", discountPercent: 0.12 }, // 12% discount for first order
+  { code: "ADH5", discountPercent: 0.05 }, // 5% discount
+  { code: "ADH10", discountPercent: 0.10 }, // 10% discount
+  { code: "FIRSTORDER", discountPercent: 0.12 }, // 12% discount
+  { code: "QWERTYUIOPASDFGHJKL", discountPercent: 0.98 }, // 96% discount
 ];
+
 
 const CheckoutPage = () => {
   const { user, isSignedIn } = useUser();
