@@ -1,11 +1,14 @@
 const express = require("express");
-const router = express.Router();
+const axios = require("axios");
 const {
   StandardCheckoutClient,
   Env,
   StandardCheckoutPayRequest,
 } = require("pg-sdk-node");
 
+const router = express.Router();
+
+let supabase = null; // will be injected
 let phonepeClient = null;
 
 const getPhonePeClient = () => {
@@ -32,6 +35,7 @@ const getPhonePeClient = () => {
   return phonepeClient;
 };
 
+// ✅ INITIATE PAYMENT
 router.post("/", async (req, res) => {
   try {
     const { amount, customer } = req.body;
@@ -54,14 +58,10 @@ router.post("/", async (req, res) => {
       .merchantOrderId(orderId)
       .amount(amount)
       .redirectUrl(redirectUrl)
-      .build({
-        callbackUrl: callbackUrl, // ✅ CORRECT WAY
-      });
+      .build({ callbackUrl });
 
     const client = getPhonePeClient();
     const response = await client.pay(payRequest);
-
-    console.log("📦 PhonePe Response:", response);
 
     if (response?.redirectUrl) {
       return res.status(200).json({
@@ -74,28 +74,88 @@ router.post("/", async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("❌ PhonePe Payment Error:", {
-      message: err.message,
-      stack: err.stack,
-      request: req.body,
-    });
-
+    console.error("❌ PhonePe Payment Error:", err);
     return res.status(500).json({
       message: "PhonePe payment initiation failed",
       error: err.message,
     });
   }
 });
+
+// ✅ WEBHOOK ENDPOINT (Optional - for future)
 router.post("/webhook", express.json(), (req, res) => {
-  const { orderId, state, ...rest } = req.body;
+  const { orderId, state } = req.body;
 
   console.log("📬 Received webhook from PhonePe:", req.body);
 
-  // TODO: Verify signature if needed
-  // TODO: Update your DB with `state` info (e.g., SUCCESS, FAILED, etc.)
+  // You can verify signature and update DB here if needed.
 
   res.status(200).send("Webhook received");
 });
 
+// ✅ POLL PAYMENT STATUS AND UPDATE ORDER
+router.get("/status/:orderId", async (req, res) => {
+  const orderId = req.params.orderId;
+  const client = getPhonePeClient();
 
-module.exports = router;
+  try {
+    const statusRes = await client.checkStatus(orderId);
+
+    if (statusRes.success && statusRes.data?.status === "SUCCESS") {
+      const { data, error } = await supabase
+        .from("orders")
+        .update({
+          payment_id: statusRes.data.transactionId,
+          order_status: "paid",
+        })
+        .eq("order_id", orderId)
+        .select();
+
+      if (error) {
+        console.error("❌ Supabase update failed:", error);
+        return res.status(500).json({ message: "Failed to update order status" });
+      }
+
+      // ✅ Send confirmation email
+      const backendBaseUrl = process.env.BACKEND_URL || "http://localhost:5000";
+      try {
+        await axios.post(`${backendBaseUrl}/api/send-email`, {
+          ...data[0].customer_info,
+          paymentMethod: data[0].payment_method,
+          orderDetails: {
+            items: data[0].ordered_items,
+            subtotal: data[0].subtotal,
+            discountAmount: data[0].discount_amount,
+            taxes: data[0].taxes,
+            shippingCost: data[0].shipping_cost,
+            additionalFees: data[0].additional_fees,
+            finalTotal: data[0].total_amount,
+          },
+          orderId: data[0].order_id,
+        });
+      } catch (emailErr) {
+        console.error("❌ Failed to send email:", emailErr.message);
+      }
+
+      return res.json({
+        message: "✅ Payment confirmed",
+        order: data[0],
+      });
+    }
+
+    return res.json({
+      message: "⚠️ Payment not confirmed",
+      status: statusRes.data?.status || "UNKNOWN",
+    });
+
+  } catch (err) {
+    console.error("❌ Error checking PhonePe payment status:", err.message);
+    return res.status(500).json({ error: "Unable to check payment status" });
+  }
+});
+
+// ✅ Export router with injected Supabase instance
+module.exports = (injectedSupabase) => {
+  supabase = injectedSupabase;
+  return router;
+};
