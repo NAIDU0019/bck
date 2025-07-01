@@ -45,6 +45,11 @@ app.use('/api/admin', authenticateAdmin, adminRoutes(supabase, null));
 // ✅ Inject Supabase into PhonePe routes
 app.use('/api/payment/phonepe', phonepeRoutes(supabase)); // 👈 FIXED HERE
 app.use('/api/payment/phonepe/callback', express.raw({ type: '*/*' }), phonepeWebhook(supabase));
+app.use(
+  "/api/payment/phonepe/callback",
+  express.raw({ type: "*/*" }), // must match PhonePe's content-type
+  phonepeWebhook(supabase)
+);
 
 // ✅ Root endpoint
 app.get("/", (req, res) => {
