@@ -12,7 +12,7 @@ const { createClient } = require('@supabase/supabase-js');
 const sendEmailRouter = require("./routes/sendEmail");
 const adminRoutes = require('./routes/adminRoutes');
 const orderRoutes = require('./routes/orderRoutes');
-const phonepeRoutes = require('./routes/phonepeRoutes');
+const phonepeRoutes = require("./routes/phonepeRoutes")(supabase);
 const phonepeWebhook = require("./routes/phonepeWebhook");
 
 const app = express();
