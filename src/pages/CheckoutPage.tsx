@@ -308,7 +308,7 @@ const CheckoutPage = () => {
   };
 
   // Initiate PhonePe payment
-import { useNavigate } from "react-router-dom";
+
 const navigate = useNavigate();
 
 const initiatePhonePePayment = async (formData) => {
