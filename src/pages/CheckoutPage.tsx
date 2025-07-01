@@ -282,6 +282,7 @@ const CheckoutPage = () => {
 
     // Save for PhonePe success redirect
     localStorage.setItem("phonepe_orderId", newOrderId);
+    
 
     // Redirect to success page
     navigate(`/checkout-success`, {
@@ -321,14 +322,14 @@ const initiatePhonePePayment = async (formData, orderId) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      amount: finalTotal * 100, // in paise
-      orderId, // Include this!
+      amount: finalTotal * 100,
+      orderId, // ✅ You pass the orderId correctly
       customer: {
         name: formData.fullName,
         email: formData.email,
         phone: formData.phoneNumber,
       },
-      customerInfo: formData, // Optional, for pre-insertion
+      customerInfo: formData,
       orderedItems: items,
       orderDetails: {
         subtotal,
@@ -350,6 +351,7 @@ const initiatePhonePePayment = async (formData, orderId) => {
     toast.error(result.message || "Payment failed.");
   }
 };
+
 
   return (
     <>
