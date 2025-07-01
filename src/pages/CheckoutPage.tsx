@@ -308,36 +308,27 @@ const CheckoutPage = () => {
   };
 
   // Initiate PhonePe payment
-
-
-
 const initiatePhonePePayment = async (formData) => {
   const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      amount: formData.totalAmount * 100,
+      amount: finalTotal * 100, // in paise
       customer: {
         name: formData.fullName,
         email: formData.email,
         phone: formData.phoneNumber,
-      },
+      }
     }),
   });
 
-  const data = await response.json();
-
-  if (data?.paymentUrl && data?.orderId) {
-    // Save orderId locally to use after redirect
-    localStorage.setItem("phonepe_orderId", data.orderId);
-
-    // Redirect to PhonePe for payment
-    window.location.href = data.paymentUrl;
+  const result = await response.json();
+  if (response.ok && result.paymentUrl) {
+    window.location.href = result.paymentUrl;
   } else {
-    alert("Failed to initiate payment");
+    toast.error(result.message || "Payment failed.");
   }
 };
-
 
   return (
     <>
