@@ -308,27 +308,36 @@ const CheckoutPage = () => {
   };
 
   // Initiate PhonePe payment
+import { useNavigate } from "react-router-dom";
+const navigate = useNavigate();
+
 const initiatePhonePePayment = async (formData) => {
   const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      amount: finalTotal * 100, // in paise
+      amount: formData.totalAmount * 100,
       customer: {
         name: formData.fullName,
         email: formData.email,
         phone: formData.phoneNumber,
-      }
+      },
     }),
   });
 
-  const result = await response.json();
-  if (response.ok && result.paymentUrl) {
-    window.location.href = result.paymentUrl;
+  const data = await response.json();
+
+  if (data?.paymentUrl && data?.orderId) {
+    // Save orderId locally to use after redirect
+    localStorage.setItem("phonepe_orderId", data.orderId);
+
+    // Redirect to PhonePe for payment
+    window.location.href = data.paymentUrl;
   } else {
-    toast.error(result.message || "Payment failed.");
+    alert("Failed to initiate payment");
   }
 };
+
 
   return (
     <>
