@@ -50,6 +50,7 @@ const App = () => {
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/success/:orderId" element={<CheckoutSuccessPage />} />
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
