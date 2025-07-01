@@ -9,15 +9,17 @@ const cors = require("cors");
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
 
+// ROUTES
 const sendEmailRouter = require("./routes/sendEmail");
 const adminRoutes = require('./routes/adminRoutes');
 const orderRoutes = require('./routes/orderRoutes');
-const phonepeRoutes = require('./routes/phonepeRoutes');
+const phonepeRoutes = require('./routes/phonepeRoutes'); // ✅ This one needs Supabase injection
 const phonepeWebhook = require("./routes/phonepeWebhook");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ✅ Supabase Client Initialization
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -29,22 +31,27 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 console.log("✅ Supabase client initialized");
 
-// Middleware
+// ✅ Middleware
 app.use(cors());
 app.use(express.json()); // Parse JSON requests
 
-// Regular routes
+// ✅ Route Definitions
 app.use("/api", sendEmailRouter);
-app.use('/api/orders', orderRoutes(supabase, null)); // io injected after server init
-app.use('/api/admin', authenticateAdmin, adminRoutes(supabase, null)); // same as above
 
-// PhonePe routes
-app.use('/api/payment/phonepe', phonepeRoutes);
+// Injecting `supabase` (and `io` later) into routes that require it
+app.use('/api/orders', orderRoutes(supabase, null));
+app.use('/api/admin', authenticateAdmin, adminRoutes(supabase, null));
+
+// ✅ Inject Supabase into PhonePe routes
+app.use('/api/payment/phonepe', phonepeRoutes(supabase)); // 👈 FIXED HERE
 app.use('/api/payment/phonepe/callback', express.raw({ type: '*/*' }), phonepeWebhook(supabase));
 
-// Root endpoint
+// ✅ Root endpoint
+app.get("/", (req, res) => {
+  res.send("Welcome to ADHYAA PICKLES Backend");
+});
 
-// WebSocket Setup
+// ✅ WebSocket Setup
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -54,7 +61,7 @@ const io = new Server(server, {
   }
 });
 
-// Inject io into route handlers that need it
+// ✅ Inject io into routes that depend on it (if needed)
 app._router.stack.forEach((layer) => {
   if (layer.handle.length === 2) {
     try {
@@ -63,7 +70,7 @@ app._router.stack.forEach((layer) => {
   }
 });
 
-// WebSocket Events
+// ✅ WebSocket Events
 io.on('connection', (socket) => {
   console.log(`🔌 WebSocket connected: ${socket.id}`);
 
@@ -90,7 +97,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Admin Authentication Middleware
+// ✅ Admin Authentication Middleware
 function authenticateAdmin(req, res, next) {
   const adminApiKey = req.headers['x-admin-api-key'];
   if (!adminApiKey || adminApiKey !== process.env.ADMIN_API_KEY) {
@@ -99,7 +106,7 @@ function authenticateAdmin(req, res, next) {
   next();
 }
 
-// Start HTTP/HTTPS Server
+// ✅ Start Server
 server.listen(PORT, () => {
   console.log(`✅ HTTP server running on http://localhost:${PORT}`);
   console.log(`✅ WebSocket server running on ws://localhost:${PORT}`);
