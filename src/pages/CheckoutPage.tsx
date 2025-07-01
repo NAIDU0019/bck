@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/sonner";
 import { formatPrice } from "@/lib/utils";
-import RazorpayCheckout from "@/components/RazorpayCheckout";
 
 import {
   Form,
@@ -37,9 +36,10 @@ const checkoutFormSchema = z.object({
   state: z.string().min(2, "State is required"),
   postalCode: z.string().min(5, "Postal Code is required").max(6, "Postal Code should not exceed 6 digits"), // Assuming Indian Pincode
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
-  paymentMethod: z.enum(["razorpay", "cod"], {
-    errorMap: () => ({ message: "Please select a payment method" }),
-  }),
+  paymentMethod: z.enum(["phonepe", "cod"], {
+  errorMap: () => ({ message: "Please select a payment method" }),
+}),
+
   savedAddressId: z.string().optional(),
 });
 
@@ -65,8 +65,6 @@ const CheckoutPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercent: number } | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showRazorpayButton, setShowRazorpayButton] = useState(false);
-  const [customerInfoForPayment, setCustomerInfoForPayment] = useState<any>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
 
   const form = useForm<CheckoutFormValues>({
@@ -291,7 +289,6 @@ const CheckoutPage = () => {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false); // Re-enable button
-      setShowRazorpayButton(false); // Hide Razorpay button
     }
   };
 
@@ -299,18 +296,37 @@ const CheckoutPage = () => {
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsSubmitting(true);
 
-    if (data.paymentMethod === "razorpay") {
-      // For Razorpay, set customer info and show button. The actual order submission
-      // will happen in RazorpayCheckout's onSuccess callback.
-      setCustomerInfoForPayment({ ...data, orderId: `ADH-${Date.now()}` }); // Ensure orderId is generated for Razorpay
-      setShowRazorpayButton(true);
-    } else if (data.paymentMethod === "cod") {
+    if (data.paymentMethod === "cod") {
       // For COD, directly send the order to the backend
       await sendOrderToBackend(data);
+    } else if (data.paymentMethod === "phonepe") {
+      // For PhonePe, initiate payment process
+      await initiatePhonePePayment(data);
     }
-    // No "else" block needed for other payment methods or direct submission
-    // because all paths should eventually lead to `sendOrderToBackend` or Razorpay.
   };
+
+  // Initiate PhonePe payment
+const initiatePhonePePayment = async (formData) => {
+  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount: finalTotal * 100, // in paise
+      customer: {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phoneNumber,
+      }
+    }),
+  });
+
+  const result = await response.json();
+  if (response.ok && result.paymentUrl) {
+    window.location.href = result.paymentUrl;
+  } else {
+    toast.error(result.message || "Payment failed.");
+  }
+};
 
   return (
     <>
@@ -473,10 +489,10 @@ const CheckoutPage = () => {
                           >
                             <FormItem className="flex items-center space-x-2">
                               <FormControl>
-                                <RadioGroupItem value="razorpay" id="razorpay" />
+                                <RadioGroupItem value="phonepe" id="phonepe" />
                               </FormControl>
-                              <FormLabel htmlFor="razorpay" className="cursor-pointer">
-                                Razorpay (Online Payment)
+                              <FormLabel htmlFor="phonepe" className="cursor-pointer">
+                                PhonePe (UPI, Cards, Wallets)
                               </FormLabel>
                             </FormItem>
 
@@ -489,6 +505,7 @@ const CheckoutPage = () => {
                               </FormLabel>
                             </FormItem>
                           </RadioGroup>
+                          
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -541,24 +558,6 @@ const CheckoutPage = () => {
                   </p>
                 )}
               </div>
-
-              {/* Razorpay Checkout Component (renders when showRazorpayButton is true) */}
-              {showRazorpayButton && customerInfoForPayment && (
-                <RazorpayCheckout
-                  amount={finalTotal}
-                  customerInfo={customerInfoForPayment}
-                  onSuccess={(paymentResponse: any) => {
-                    toast.success("Payment successful!");
-                    // Call the new sendOrderToBackend function
-                    sendOrderToBackend(customerInfoForPayment, paymentResponse.razorpay_payment_id);
-                  }}
-                  onFailure={() => {
-                    toast.error("Payment failed. Please try again.");
-                    setShowRazorpayButton(false);
-                    setIsSubmitting(false); // Allow resubmission after failure
-                  }}
-                />
-              )}
             </div>
 
             {/* Order Summary */}
