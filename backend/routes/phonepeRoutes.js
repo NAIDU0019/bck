@@ -111,48 +111,35 @@ router.get("/status/:orderId", async (req, res) => {
         .eq("order_id", orderId)
         .select();
 
-      if (error) {
-        console.error("❌ Supabase update failed:", error);
-        return res.status(500).json({ message: "Failed to update order status" });
-      }
+      if (error) return res.status(500).json({ message: "DB update failed", error });
 
-      // ✅ Send confirmation email
+      // Send confirmation email
       const backendBaseUrl = process.env.BACKEND_URL || "http://localhost:5000";
-      try {
-        await axios.post(`${backendBaseUrl}/api/send-email`, {
-          ...data[0].customer_info,
-          paymentMethod: data[0].payment_method,
-          orderDetails: {
-            items: data[0].ordered_items,
-            subtotal: data[0].subtotal,
-            discountAmount: data[0].discount_amount,
-            taxes: data[0].taxes,
-            shippingCost: data[0].shipping_cost,
-            additionalFees: data[0].additional_fees,
-            finalTotal: data[0].total_amount,
-          },
-          orderId: data[0].order_id,
-        });
-      } catch (emailErr) {
-        console.error("❌ Failed to send email:", emailErr.message);
-      }
-
-      return res.json({
-        message: "✅ Payment confirmed",
-        order: data[0],
+      await axios.post(`${backendBaseUrl}/api/send-email`, {
+        ...data[0].customer_info,
+        paymentMethod: data[0].payment_method,
+        orderDetails: {
+          items: data[0].ordered_items,
+          subtotal: data[0].subtotal,
+          discountAmount: data[0].discount_amount,
+          taxes: data[0].taxes,
+          shippingCost: data[0].shipping_cost,
+          additionalFees: data[0].additional_fees,
+          finalTotal: data[0].total_amount,
+        },
+        orderId: data[0].order_id,
       });
+
+      return res.json({ message: "Payment confirmed", order: data[0] });
     }
 
-    return res.json({
-      message: "⚠️ Payment not confirmed",
-      status: statusRes.data?.status || "UNKNOWN",
-    });
-
+    return res.json({ message: "Payment not confirmed yet", status: statusRes.data?.status });
   } catch (err) {
-    console.error("❌ Error checking PhonePe payment status:", err.message);
+    console.error("❌ Error in status check:", err.message);
     return res.status(500).json({ error: "Unable to check payment status" });
   }
 });
+
 
 // ✅ Export router with injected Supabase instance
 module.exports = (injectedSupabase) => {
