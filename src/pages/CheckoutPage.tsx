@@ -309,7 +309,7 @@ const CheckoutPage = () => {
 
   // Initiate PhonePe payment
 
-const navigate = useNavigate();
+
 
 const initiatePhonePePayment = async (formData) => {
   const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
