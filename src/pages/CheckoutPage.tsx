@@ -308,17 +308,30 @@ const CheckoutPage = () => {
   };
 
   // Initiate PhonePe payment
-const initiatePhonePePayment = async (formData) => {
+const initiatePhonePePayment = async (formData, orderId) => {
   const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       amount: finalTotal * 100, // in paise
+      orderId, // Include this!
       customer: {
         name: formData.fullName,
         email: formData.email,
         phone: formData.phoneNumber,
-      }
+      },
+      customerInfo: formData, // Optional, for pre-insertion
+      orderedItems: items,
+      orderDetails: {
+        subtotal,
+        discountAmount,
+        taxes,
+        shippingCost,
+        additionalFees: ADDITIONAL_FEES,
+        finalTotal,
+      },
+      paymentMethod: "phonepe",
+      appliedCoupon,
     }),
   });
 
