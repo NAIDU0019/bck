@@ -1,17 +1,20 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const PhonePeRedirectHandler = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const orderId = localStorage.getItem("phonepe_orderId");
+    const queryParams = new URLSearchParams(location.search);
+    const orderId = queryParams.get("orderId");
+
     if (orderId) {
       navigate(`/success/${orderId}`);
     } else {
       navigate("/"); // fallback
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   return <p>Redirecting...</p>;
 };
