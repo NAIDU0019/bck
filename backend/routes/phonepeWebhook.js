@@ -10,46 +10,64 @@ module.exports = (supabase) => {
 
   // NOTE: express.raw() is required in your main app.js for this route
   router.post("/", async (req, res) => {
-    const authorizationHeader = req.headers["authorization"];
-    const rawBody = req.body.toString(); // because express.raw() is used
-    const clientId = process.env.PHONEPE_CLIENT_ID;
-    const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
-    const clientVersion = parseInt(process.env.PHONEPE_CLIENT_VERSION);
-    const env = process.env.PHONEPE_ENV === "PRODUCTION" ? Env.PRODUCTION : Env.SANDBOX;
-
-    const phonepeClient = StandardCheckoutClient.getInstance(
-      clientId,
-      clientSecret,
-      clientVersion,
-      env
+  try {
+    const client = StandardCheckoutClient.getInstance(
+      process.env.PHONEPE_CLIENT_ID,
+      process.env.PHONEPE_CLIENT_SECRET,
+      parseInt(process.env.PHONEPE_CLIENT_VERSION),
+      process.env.PHONEPE_ENV === "PROD" ? Env.PRODUCTION : Env.SANDBOX
     );
 
-    try {
-      const callbackResponse = phonepeClient.validateCallback(
-        process.env.PHONEPE_WEBHOOK_USERNAME,
-        process.env.PHONEPE_WEBHOOK_PASSWORD,
-        authorizationHeader,
-        rawBody
-      );
+    const callback = client.validateCallback(
+      process.env.PHONEPE_CALLBACK_USERNAME,
+      process.env.PHONEPE_CALLBACK_PASSWORD,
+      req.headers["x-verify"],
+      req.body.toString()
+    );
 
-      const { merchantOrderId, state, amount } = callbackResponse.payload;
+    const { type, payload } = callback;
+    const orderId = payload.merchantOrderId;
+    const paymentState = payload.state;
 
-      // Update your DB with this order as 'PAID' or 'FAILED'
-      const { error } = await supabase
-        .from("orders")
-        .update({ payment_status: state === "COMPLETED" ? "PAID" : "FAILED" })
-        .eq("order_id", merchantOrderId);
+    console.log("📦 CALLBACK:", type, paymentState, orderId);
 
-      if (error) throw new Error(error.message);
-
-      console.log("✅ Webhook processed:", { orderId: merchantOrderId, state });
-
-      res.status(200).send("Webhook processed");
-    } catch (err) {
-      console.error("❌ Webhook verification failed:", err.message);
-      res.status(400).send("Invalid callback");
+    if (type === "CHECKOUT_ORDER_COMPLETED" && paymentState === "COMPLETED") {
+      // ✅ Insert into real `orders` table
+      await supabase.from("orders").insert([
+        {
+          order_id: orderId,
+          customer_info: payload.metaInfo.customerInfo,
+          ordered_items: payload.metaInfo.orderedItems,
+          subtotal: payload.metaInfo.orderDetails.subtotal,
+          discount_amount: payload.metaInfo.orderDetails.discountAmount,
+          taxes: payload.metaInfo.orderDetails.taxes,
+          shipping_cost: payload.metaInfo.orderDetails.shippingCost,
+          additional_fees: payload.metaInfo.orderDetails.additionalFees,
+          total_amount: payload.metaInfo.orderDetails.finalTotal,
+          payment_method: "phonepe",
+          applied_coupon: payload.metaInfo.appliedCoupon,
+          state: "COMPLETED"
+        }
+      ]);
+    } else if (type === "CHECKOUT_ORDER_FAILED" || paymentState === "FAILED") {
+      // ❌ Payment failed or canceled: log or store as needed
+      console.warn("❌ Payment failed for order:", orderId);
+      await supabase.from("orders").insert([
+        {
+          order_id: orderId,
+          state: "FAILED",
+          payment_method: "phonepe"
+        }
+      ]);
     }
-  });
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("❌ PhonePe Callback Error:", err);
+    res.sendStatus(500);
+  }
+});
+
 
   return router;
 };
