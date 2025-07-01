@@ -23,7 +23,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import FAQ from "./pages/FAQ";
 import AdminDashboard from './pages/AdminDashboard';
 
-
+import PhonePeRedirectHandler from "@/pages/PhonePeRedirectHandler";
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -51,6 +51,7 @@ const App = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/success/:orderId" element={<CheckoutSuccessPage />} />
+              <Route path="/phonepe-redirect" element={<PhonePeRedirectHandler />} />
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
