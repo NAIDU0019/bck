@@ -8,13 +8,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
-    "axios": "^1.9.0",
+    "axios": "^1.10.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "express-async-handler": "^1.2.0",
     "nodemailer": "^6.9.1",
     "pdfkit": "^0.17.1",
+    "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },
