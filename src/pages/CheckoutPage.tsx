@@ -309,8 +309,7 @@ const CheckoutPage = () => {
   const onSubmit = async (data: CheckoutFormValues) => {
   setIsSubmitting(true);
   const newOrderId = generateOrderId();
-  const onSubmit = async (data: CheckoutFormValues) => {
-    setIsSubmitting(true);
+  
 
     if (data.paymentMethod === "cod") {
       // For COD, directly send the order to the backend
