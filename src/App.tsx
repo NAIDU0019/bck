@@ -52,6 +52,8 @@ const App = () => {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/success/:orderId" element={<CheckoutSuccessPage />} />
               <Route path="/phonepe-redirect" element={<PhonePeRedirectHandler />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+  <Route path="/order-summary/:orderId" element={<OrderSummary />} />
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
