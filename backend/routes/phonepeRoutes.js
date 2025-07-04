@@ -112,6 +112,7 @@ router.get("/status/:orderId", async (req, res) => {
     console.log(`📡 Payment status for ${orderId}:`, statusRes);
 
     if (statusRes.success && statusRes.data?.status === "SUCCESS") {
+      await saveOrderToDB(txnId);
       const { data, error } = await supabase
         .from("orders")
         .update({
