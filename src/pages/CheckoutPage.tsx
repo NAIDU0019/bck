@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/sonner";
-import { generateOrderId } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
 
 import {
@@ -201,7 +200,7 @@ const CheckoutPage = () => {
 
     if (foundCoupon) {
       setAppliedCoupon(foundCoupon);
-      toast.success(`Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.`);
+      toast.success(Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.);
     } else {
       setAppliedCoupon(null);
       toast.error("Invalid coupon code. Please try again.");
@@ -215,7 +214,6 @@ const CheckoutPage = () => {
     toast.info("Coupon removed.");
   };
 
-
   // Function to send order data to backend (and trigger email from backend)
  const sendOrderToBackend = async (
   data: CheckoutFormValues,
@@ -223,12 +221,12 @@ const CheckoutPage = () => {
   status: "pending" | "paid" = "pending", // default is "pending" (COD)
   customOrderId?: string // to reuse same orderId from localStorage
 ) => {
-  const newOrderId = customOrderId || `ADH-${Date.now()}`; // Use custom if provided
+  const newOrderId = customOrderId || ADH-${Date.now()}; // Use custom if provided
 
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-    const response = await fetch(`${backendUrl}/api/orders`, {
+    const response = await fetch(${backendUrl}/api/orders, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -287,7 +285,7 @@ const CheckoutPage = () => {
     
 
     // Redirect to success page
-    navigate(`/checkout-success`, {
+    navigate(/checkout-success, {
       state: {
         customerInfo: { ...data, orderId: newOrderId },
         orderedItems: items,
@@ -307,9 +305,7 @@ const CheckoutPage = () => {
 
   // Handle form submission
   const onSubmit = async (data: CheckoutFormValues) => {
-  setIsSubmitting(true);
-  const newOrderId = generateOrderId();
-  
+    setIsSubmitting(true);
 
     if (data.paymentMethod === "cod") {
       // For COD, directly send the order to the backend
@@ -320,14 +316,9 @@ const CheckoutPage = () => {
     }
   };
 
-
-  // ... your JSX form using onSubmit
-
-
-
   // Initiate PhonePe payment
 const initiatePhonePePayment = async (formData, orderId) => {
-  const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
+  const response = await fetch(${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -607,7 +598,7 @@ const initiatePhonePePayment = async (formData, orderId) => {
 
                     return (
                       <div
-                        key={`${item.product.id}-${item.weight}`}
+                        key={${item.product.id}-${item.weight}}
                         className="flex justify-between items-center"
                       >
                         <div className="flex items-center space-x-3">
@@ -645,7 +636,7 @@ const initiatePhonePePayment = async (formData, orderId) => {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeItem(item.product.id, item.weight)}
-                            aria-label={`Remove ${item.product.name} (${item.weight}g) from cart`}
+                            aria-label={Remove ${item.product.name} (${item.weight}g) from cart}
                           >
                             ✕
                           </Button>
@@ -705,4 +696,4 @@ const initiatePhonePePayment = async (formData, orderId) => {
   );
 };
 
-export default CheckoutPage;
+export default CheckoutPage
