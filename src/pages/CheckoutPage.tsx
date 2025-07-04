@@ -195,17 +195,18 @@ const CheckoutPage = () => {
   // --- END: ORDER CALCULATION LOGIC ---
 
   const handleApplyCoupon = () => {
-    const codeToApply = couponCode.trim().toUpperCase();
-    const foundCoupon = COUPONS.find(c => c.code === codeToApply);
+  const codeToApply = couponCode.trim().toUpperCase();
+  const foundCoupon = COUPONS.find(c => c.code === codeToApply);
 
-    if (foundCoupon) {
-      setAppliedCoupon(foundCoupon);
-      toast.success(Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.);
-    } else {
-      setAppliedCoupon(null);
-      toast.error("Invalid coupon code. Please try again.");
-    }
-  };
+  if (foundCoupon) {
+    setAppliedCoupon(foundCoupon);
+    toast.success(`Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.`);
+  } else {
+    setAppliedCoupon(null);
+    toast.error("Invalid coupon code. Please try again.");
+  }
+};
+
 
   // Function to remove the currently applied coupon
   const handleRemoveCoupon = () => {
