@@ -307,27 +307,39 @@ const CheckoutPage = () => {
   // Handle form submission
   const onSubmit = async (data: CheckoutFormValues) => {
   setIsSubmitting(true);
+  const newOrderId = generateOrderId();
 
-  if (data.paymentMethod === "cod") {
-  await sendOrderToBackend(data);
-} else if (data.paymentMethod === "phonepe") {
-  const newOrderId = customOrderId || `ADH-${Date.now()}`;
-  const { ok, result } = await initiatePhonePePayment(data, newOrderId);
+  try {
+      if (data.paymentMethod === "cod") {
+        await sendOrderToBackend(data, undefined, "pending", newOrderId);
+        toast.success("Order placed with Cash on Delivery");
+        navigate("/checkout-success", {
+          state: {
+            customerInfo: data,
+            orderedItems: items,
+            orderTotal: calculateFinalTotal(), // Use your logic here
+          },
+        });
+      } else if (data.paymentMethod === "phonepe") {
+        const { ok, result } = await initiatePhonePePayment(data, newOrderId);
 
-  if (ok && result.paymentUrl) {
-    // ✅ Save order BEFORE redirect
-    await sendOrderToBackend(data, newOrderId);
+        if (ok && result.paymentUrl) {
+          await sendOrderToBackend(data, undefined, "pending", newOrderId);
+          window.location.href = result.paymentUrl;
+        } else {
+          toast.error(result.message || "Payment initiation failed.");
+        }
+      }
+    } catch (err) {
+      console.error("❌ Error placing order:", err);
+      toast.error("Something went wrong during checkout.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    // ✅ Then redirect
-    window.location.href = result.paymentUrl;
-  } else {
-    toast.error(result.message || "Payment failed.");
-  }
-}
+  // ... your JSX form using onSubmit
 
-setIsSubmitting(false);
-
-};
 
 
   // Initiate PhonePe payment
