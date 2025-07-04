@@ -8,16 +8,7 @@ const express = require("express");
 const cors = require("cors");
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
-import cors from "cors"; // if using ESM
-// const cors = require("cors"); // if using CommonJS
 
-const allowedOrigins = ["https://www.adhyaapickles.in"];
-
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
-}));
 
 // ROUTES
 const sendEmailRouter = require("./routes/sendEmail");
