@@ -1,9 +1,12 @@
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as ShadToaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
+
+// ✅ Page components
 import Head from "./components/Head";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
@@ -13,7 +16,6 @@ import ContactPage from "./pages/ContactPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CheckoutSuccessPage from "./pages/CheckoutSuccessPage";
 import NotFound from "./pages/NotFound";
-import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import DashboardPage from "./pages/DashboardPage";
 import AuthPage from "./pages/AuthPage";
 import ShippingPolicy from "./pages/ShippingPolicy";
@@ -21,11 +23,12 @@ import ReturnPolicy from "./pages/ReturnPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import FAQ from "./pages/FAQ";
-import AdminDashboard from './pages/AdminDashboard';
+import AdminDashboard from "./pages/AdminDashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import PhonePeRedirectHandler from "./pages/PhonePeRedirectHandler";
+import OrderSummary from "./pages/OrderSummary"; // ✅ Make sure this exists
 
-
-import PhonePeRedirectHandler from "@/pages/PhonePeRedirectHandler";
+// ✅ React Query setup
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -34,8 +37,8 @@ const App = () => {
       <TooltipProvider>
         <CartProvider>
           <Head />
-          <Toaster />
-          <Sonner />
+          <ShadToaster /> {/* shadcn ui Toaster */}
+          <Sonner /> {/* If you use sonner toasts elsewhere */}
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
@@ -55,7 +58,7 @@ const App = () => {
               <Route path="/success/:orderId" element={<CheckoutSuccessPage />} />
               <Route path="/phonepe-redirect" element={<PhonePeRedirectHandler />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
-
+              <Route path="/order-summary/:orderId" element={<OrderSummary />} />
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
@@ -76,7 +79,7 @@ const App = () => {
                 }
               />
 
-              {/* 404 Route */}
+              {/* 404 Not Found */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
