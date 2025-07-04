@@ -310,7 +310,7 @@ const CheckoutPage = () => {
   if (data.paymentMethod === "cod") {
     await sendOrderToBackend(data);
   } else if (data.paymentMethod === "phonepe") {
-    const { ok, result } = await initiatePhonePePayment(data, generateOrderId());
+    const { ok, result } = await initiatePhonePePayment(data, const newOrderId = customOrderId || `ADH-${Date.now()}`;);
 
     if (ok && result.paymentUrl) {
       // ✅ Save order BEFORE redirect
