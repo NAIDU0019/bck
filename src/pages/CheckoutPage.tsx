@@ -213,9 +213,7 @@ const CheckoutPage = () => {
     setCouponCode(""); // Clear the input field
     toast.info("Coupon removed.");
   };
-export function generateOrderId(customOrderId?: string): string {
-  return customOrderId || `ADH-${Date.now()}`;
-}
+
 
   // Function to send order data to backend (and trigger email from backend)
  const sendOrderToBackend = async (
