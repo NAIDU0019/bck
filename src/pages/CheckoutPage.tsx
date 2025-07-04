@@ -325,7 +325,7 @@ const CheckoutPage = () => {
         const { ok, result } = await initiatePhonePePayment(data, newOrderId);
 
         if (ok && result.paymentUrl) {
-          await sendOrderToBackend(data, undefined, "pending", newOrderId);
+          
           window.location.href = result.paymentUrl;
         } else {
           toast.error(result.message || "Payment initiation failed.");
