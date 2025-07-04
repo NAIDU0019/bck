@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/sonner";
+import { generateOrderId } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
 
 import {
