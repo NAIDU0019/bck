@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect } from "react";
 import Head from "@/components/Head";
 import Navbar from "@/components/Navbar";
@@ -10,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/sonner";
 import { formatPrice } from "@/lib/utils";
-
 import {
   Form,
   FormControl,
@@ -24,8 +25,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-
-// Import the Loader2 icon from lucide-react
 import { Loader2 } from "lucide-react";
 
 const checkoutFormSchema = z.object({
@@ -34,42 +33,40 @@ const checkoutFormSchema = z.object({
   address: z.string().min(5, "Address is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
-  postalCode: z.string().min(5, "Postal Code is required").max(6, "Postal Code should not exceed 6 digits"), // Assuming Indian Pincode
+  postalCode: z
+    .string()
+    .min(5, "Postal Code is required")
+    .max(6, "Postal Code should not exceed 6 digits"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   paymentMethod: z.enum(["phonepe", "cod"], {
-  errorMap: () => ({ message: "Please select a payment method" }),
-}),
-
+    errorMap: () => ({ message: "Please select a payment method" }),
+  }),
   savedAddressId: z.string().optional(),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
-const TAX_RATE = 0; // 10% tax for example
-const ADDITIONAL_FEES = 0; // Flat additional fees example
+const TAX_RATE = 0;
+const ADDITIONAL_FEES = 0;
 
-// Define your coupons here. In a real application, these would likely come from a database.
 const COUPONS = [
-  { code: "ADH5", discountPercent: 0.05 }, // 5% discount
-  { code: "ADH10", discountPercent: 0.10 }, // 10% discount
-  { code: "FIRSTORDER", discountPercent: 0.12 }, // 12% discount
-  { code: "QWERTYUIOPASDFGHJKL", discountPercent: 0.98 }, // 96% discount
+  { code: "ADH5", discountPercent: 0.05 },
+  { code: "ADH10", discountPercent: 0.1 },
+  { code: "FIRSTORDER", discountPercent: 0.12 },
+  { code: "QWERTYUIOPASDFGHJKL", discountPercent: 0.98 },
 ];
 
-
 const CheckoutPage = () => {
-  const { user, isSignedIn } = useUser();
+  const { user } = useUser();
   const { items, updateItemQuantity, removeItem, clearCart } = useCart();
   const navigate = useNavigate();
 
-  // State for coupon management
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercent: number } | null>(null);
-
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
 
-  const form = useForm<CheckoutFormValues>({
+  const form = useForm({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
       fullName: "",
@@ -79,19 +76,17 @@ const CheckoutPage = () => {
       state: "",
       postalCode: "",
       phoneNumber: "",
-      paymentMethod: "cod", // Default to COD
+      paymentMethod: "cod",
       savedAddressId: undefined,
     },
   });
 
-  // Populate form fields if user is signed in and has saved addresses
   useEffect(() => {
     if (user) {
-      const addresses = (user.publicMetadata?.addresses as any[]) || [];
+      const addresses = (user.publicMetadata?.addresses || []);
       setSavedAddresses(addresses);
-
       if (addresses.length > 0) {
-        const addr = addresses[0]; // Pre-fill with the first saved address
+        const addr = addresses[0];
         form.reset({
           fullName: addr.fullName || user.fullName || "",
           email: user.primaryEmailAddress?.emailAddress || "",
@@ -100,161 +95,136 @@ const CheckoutPage = () => {
           state: addr.state || "",
           postalCode: addr.postalCode || "",
           phoneNumber: addr.phoneNumber || "",
-          paymentMethod: "cod", // Keep default COD or set from user preference
+          paymentMethod: "cod",
           savedAddressId: addr.id,
         });
       } else {
-        // If no saved addresses, just pre-fill name and email from Clerk
-        form.setValue("fullName", user.fullName || user.firstName + " " + user.lastName || "");
+        form.setValue("fullName", user.fullName || `${user.firstName} ${user.lastName}`);
         form.setValue("email", user.primaryEmailAddress?.emailAddress || "");
       }
     }
   }, [user, form]);
 
-  // Handle changing saved addresses dropdown
-  const handleSavedAddressChange = (addressId: string) => {
-    const addr = savedAddresses.find((a) => a.id === addressId);
-    if (addr) {
-      form.setValue("fullName", addr.fullName || user?.fullName || "");
-      form.setValue("email", user?.primaryEmailAddress?.emailAddress || "");
-      form.setValue("address", addr.address || "");
-      form.setValue("city", addr.city || "");
-      form.setValue("state", addr.state || "");
-      form.setValue("postalCode", addr.postalCode || "");
-      form.setValue("phoneNumber", addr.phoneNumber || "");
-      form.setValue("savedAddressId", addressId);
-    } else {
-      // If "Select saved address" or an invalid ID is chosen, clear address fields
-      form.setValue("savedAddressId", "");
-      form.setValue("address", "");
-      form.setValue("city", "");
-      form.setValue("state", "");
-      form.setValue("postalCode", "");
-      form.setValue("phoneNumber", "");
-      // Optionally reset name/email if they were from the saved address
-      form.setValue("fullName", user?.fullName || user?.firstName + " " + user?.lastName || "");
-      form.setValue("email", user?.primaryEmailAddress?.emailAddress || "");
-    }
-  };
-
-  // If cart is empty, redirect or show message
-  if (items.length === 0) {
-    return (
-      <>
-        <Head title="Cart Empty | ADHYAA PICKLES" />
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-24 text-center">
-            <h1 className="text-4xl font-bold mb-4">Your Cart is Empty!</h1>
-            <p className="text-muted-foreground mb-6">
-              Looks like your cart is empty. Please add some delicious pickles before proceeding to checkout.
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button onClick={() => navigate("/")}>Go to Home</Button>
-              <Button variant="outline" onClick={() => navigate("/products")}>
-                Browse Products
-              </Button>
-            </div>
-          </main>
-          <Footer />
-        </div>
-      </>
-    );
-  }
-
-  // --- START: ORDER CALCULATION LOGIC ---
-  // 1. Calculate Subtotal (sum of item prices)
   const subtotal = items.reduce((acc, item) => {
     const unitPrice = item.product.pricePerWeight?.[item.weight] || 0;
     return acc + unitPrice * item.quantity;
   }, 0);
 
-  // 2. Calculate Discount Amount (applied to subtotal)
   const discountAmount = appliedCoupon ? subtotal * appliedCoupon.discountPercent : 0;
-
-  // 3. Calculate Subtotal After Discount
   const discountedSubtotal = subtotal - discountAmount;
-
-  // 4. Calculate Shipping Cost based on original subtotal for thresholds
   let shippingCost = 0;
-  if (subtotal > 1000) {
-    shippingCost = 0; // Free shipping over ₹1000
-  } else if (subtotal < 250) {
-    shippingCost = 5;
-  } else if (subtotal < 500) {
-    shippingCost = 65;
-  } else {
-    shippingCost = 70; // For subtotals between ₹500 and ₹1000 (inclusive)
-  }
-
-  // 5. Calculate Taxes (applied to discounted subtotal)
+  if (subtotal > 1000) shippingCost = 0;
+  else if (subtotal < 250) shippingCost = 5;
+  else if (subtotal < 500) shippingCost = 65;
+  else shippingCost = 70;
   const taxes = discountedSubtotal * TAX_RATE;
-
-  // 6. Calculate Final Total
   const finalTotal = discountedSubtotal + taxes + shippingCost + ADDITIONAL_FEES;
-  // --- END: ORDER CALCULATION LOGIC ---
 
   const handleApplyCoupon = () => {
-  const codeToApply = couponCode.trim().toUpperCase();
-  const foundCoupon = COUPONS.find(c => c.code === codeToApply);
+    const codeToApply = couponCode.trim().toUpperCase();
+    const foundCoupon = COUPONS.find((c) => c.code === codeToApply);
+    if (foundCoupon) {
+      setAppliedCoupon(foundCoupon);
+      toast.success(`Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.`);
+    } else {
+      setAppliedCoupon(null);
+      toast.error("Invalid coupon code. Please try again.");
+    }
+  };
 
-  if (foundCoupon) {
-    setAppliedCoupon(foundCoupon);
-    toast.success(`Coupon "${foundCoupon.code}" applied successfully! You got ${foundCoupon.discountPercent * 100}% off.`);
-  } else {
-    setAppliedCoupon(null);
-    toast.error("Invalid coupon code. Please try again.");
-  }
-};
-
-
-  // Function to remove the currently applied coupon
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
-    setCouponCode(""); // Clear the input field
+    setCouponCode("");
     toast.info("Coupon removed.");
   };
 
-  // Function to send order data to backend (and trigger email from backend)
- const sendOrderToBackend = async (
-  data: CheckoutFormValues,
-  paymentId?: string,
-  status: "pending" | "paid" = "pending", // default is "pending" (COD)
-  customOrderId?: string // to reuse same orderId from localStorage
-) => {
-  const newOrderId = customOrderId || ADH-${Date.now()}; // Use custom if provided
-
-  try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-
-    const response = await fetch(${backendUrl}/api/orders, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Applied-Coupon": appliedCoupon?.code || "",
-      },
-      body: JSON.stringify({
-        orderId: newOrderId,
-        status, // ✅ NEW: pass "paid" or "pending"
-        customerInfo: {
-          fullName: data.fullName,
-          email: data.email,
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          postalCode: data.postalCode,
-          phoneNumber: data.phoneNumber,
+  const sendOrderToBackend = async (data, paymentId = null, status = "pending", customOrderId) => {
+    const newOrderId = customOrderId || `ADH-${Date.now()}`;
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Applied-Coupon": appliedCoupon?.code || "",
         },
-        orderedItems: items.map(item => ({
-          product: {
-            id: item.product.id,
-            name: item.product.name,
-            image: item.product.image,
-            pricePerWeight: item.product.pricePerWeight || { [item.weight]: item.unitPrice },
+        body: JSON.stringify({
+          orderId: newOrderId,
+          status,
+          customerInfo: {
+            fullName: data.fullName,
+            email: data.email,
+            address: data.address,
+            city: data.city,
+            state: data.state,
+            postalCode: data.postalCode,
+            phoneNumber: data.phoneNumber,
           },
-          weight: item.weight,
-          quantity: item.quantity,
-        })),
+          orderedItems: items.map((item) => ({
+            product: {
+              id: item.product.id,
+              name: item.product.name,
+              image: item.product.image,
+              pricePerWeight: item.product.pricePerWeight || {
+                [item.weight]: item.unitPrice,
+              },
+            },
+            weight: item.weight,
+            quantity: item.quantity,
+          })),
+          orderDetails: {
+            subtotal,
+            discountAmount,
+            taxes,
+            shippingCost,
+            additionalFees: ADDITIONAL_FEES,
+            finalTotal,
+          },
+          totalAmount: finalTotal,
+          paymentMethod: data.paymentMethod,
+          paymentId,
+          appliedCoupon,
+        }),
+      });
+      const responseData = await response.json();
+      if (!response.ok) {
+        toast.error(responseData.message || "Failed to place order.");
+        return;
+      }
+      toast.success("Order placed successfully!");
+      clearCart();
+      localStorage.setItem("phonepe_orderId", newOrderId);
+      navigate("/checkout-success", {
+        state: {
+          customerInfo: { ...data, orderId: newOrderId },
+          orderedItems: items,
+          orderTotal: finalTotal,
+          orderId: newOrderId,
+        },
+      });
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const initiatePhonePePayment = async (formData) => {
+    const orderId = `ADH-${Date.now()}`;
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: finalTotal * 100,
+        orderId,
+        customer: {
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phoneNumber,
+        },
+        customerInfo: formData,
+        orderedItems: items,
         orderDetails: {
           subtotal,
           discountAmount,
@@ -263,101 +233,29 @@ const CheckoutPage = () => {
           additionalFees: ADDITIONAL_FEES,
           finalTotal,
         },
-        totalAmount: finalTotal,
-        paymentMethod: data.paymentMethod,
-        paymentId: paymentId || null,
-        appliedCoupon: appliedCoupon,
+        paymentMethod: "phonepe",
+        appliedCoupon,
       }),
     });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      console.error("Backend order submission failed:", responseData);
-      toast.error(responseData.message || "Failed to place order.");
-      return;
+    const result = await response.json();
+    if (response.ok && result.paymentUrl) {
+      window.location.href = result.paymentUrl;
+    } else {
+      toast.error(result.message || "Payment failed.");
     }
+  };
 
-    toast.success("Order placed successfully!");
-    clearCart();
-
-    // Save for PhonePe success redirect
-    localStorage.setItem("phonepe_orderId", newOrderId);
-    
-
-    // Redirect to success page
-    navigate(/checkout-success, {
-      state: {
-        customerInfo: { ...data, orderId: newOrderId },
-        orderedItems: items,
-        orderTotal: finalTotal,
-        orderId: newOrderId,
-      },
-    });
-
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    toast.error("An unexpected error occurred. Please try again.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
-  // Handle form submission
-  const onSubmit = async (data: CheckoutFormValues) => {
+  const onSubmit = async (data) => {
     setIsSubmitting(true);
-
     if (data.paymentMethod === "cod") {
-      // For COD, directly send the order to the backend
       await sendOrderToBackend(data);
     } else if (data.paymentMethod === "phonepe") {
-      // For PhonePe, initiate payment process
       await initiatePhonePePayment(data);
     }
   };
 
-  // Initiate PhonePe payment
-const initiatePhonePePayment = async (formData, orderId) => {
-  const response = await fetch(${import.meta.env.VITE_BACKEND_URL}/api/payment/phonepe, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amount: finalTotal * 100,
-      orderId, // ✅ You pass the orderId correctly
-      customer: {
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phoneNumber,
-      },
-      customerInfo: formData,
-      orderedItems: items,
-      orderDetails: {
-        subtotal,
-        discountAmount,
-        taxes,
-        shippingCost,
-        additionalFees: ADDITIONAL_FEES,
-        finalTotal,
-      },
-      paymentMethod: "phonepe",
-      appliedCoupon,
-    }),
-  });
-
-  const result = await response.json();
-  if (response.ok && result.paymentUrl) {
-    window.location.href = result.paymentUrl;
-  } else {
-    toast.error(result.message || "Payment failed.");
-  }
-};
-
-
   return (
-    <>
-      <Head title="Checkout - ADHYAA PICKLES" />
-      <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-8 md:py-16">
           <h1 className="text-3xl font-display font-bold mb-8">Checkout</h1>
@@ -693,8 +591,7 @@ const initiatePhonePePayment = async (formData, orderId) => {
         </main>
         <Footer />
       </div>
-    </>
   );
 };
 
-export default CheckoutPage
+export default CheckoutPage;
