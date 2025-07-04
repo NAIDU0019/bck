@@ -213,6 +213,9 @@ const CheckoutPage = () => {
     setCouponCode(""); // Clear the input field
     toast.info("Coupon removed.");
   };
+export function generateOrderId(customOrderId?: string): string {
+  return customOrderId || `ADH-${Date.now()}`;
+}
 
   // Function to send order data to backend (and trigger email from backend)
  const sendOrderToBackend = async (
@@ -308,22 +311,24 @@ const CheckoutPage = () => {
   setIsSubmitting(true);
 
   if (data.paymentMethod === "cod") {
-    await sendOrderToBackend(data);
-  } else if (data.paymentMethod === "phonepe") {
-    const { ok, result } = await initiatePhonePePayment(data, const newOrderId = customOrderId || `ADH-${Date.now()}`;);
+  await sendOrderToBackend(data);
+} else if (data.paymentMethod === "phonepe") {
+  const newOrderId = customOrderId || `ADH-${Date.now()}`;
+  const { ok, result } = await initiatePhonePePayment(data, newOrderId);
 
-    if (ok && result.paymentUrl) {
-      // ✅ Save order BEFORE redirect
-      await sendOrderToBackend(data);
+  if (ok && result.paymentUrl) {
+    // ✅ Save order BEFORE redirect
+    await sendOrderToBackend(data, newOrderId);
 
-      // ✅ Then redirect
-      window.location.href = result.paymentUrl;
-    } else {
-      toast.error(result.message || "Payment failed.");
-    }
+    // ✅ Then redirect
+    window.location.href = result.paymentUrl;
+  } else {
+    toast.error(result.message || "Payment failed.");
   }
+}
 
-  setIsSubmitting(false);
+setIsSubmitting(false);
+
 };
 
 
