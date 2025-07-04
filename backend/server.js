@@ -33,7 +33,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 console.log("✅ Supabase client initialized");
 
 // ✅ Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["https://www.adhyaapickles.in"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
+
 app.use(express.json()); // Parse JSON requests
 
 // ✅ Route Definitions
