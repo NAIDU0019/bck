@@ -22,6 +22,8 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import FAQ from "./pages/FAQ";
 import AdminDashboard from './pages/AdminDashboard';
+import PaymentSuccess from "./pages/PaymentSuccess";
+
 
 import PhonePeRedirectHandler from "@/pages/PhonePeRedirectHandler";
 const queryClient = new QueryClient();
@@ -53,7 +55,7 @@ const App = () => {
               <Route path="/success/:orderId" element={<CheckoutSuccessPage />} />
               <Route path="/phonepe-redirect" element={<PhonePeRedirectHandler />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
-  <Route path="/order-summary/:orderId" element={<OrderSummary />} />
+
 
               {/* Clerk Auth Pages */}
               <Route path="/sign-in/*" element={<AuthPage />} />
