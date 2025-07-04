@@ -309,35 +309,18 @@ const CheckoutPage = () => {
   const onSubmit = async (data: CheckoutFormValues) => {
   setIsSubmitting(true);
   const newOrderId = generateOrderId();
+  const onSubmit = async (data: CheckoutFormValues) => {
+    setIsSubmitting(true);
 
-  try {
-      if (data.paymentMethod === "cod") {
-        await sendOrderToBackend(data, undefined, "pending", newOrderId);
-        toast.success("Order placed with Cash on Delivery");
-        navigate("/checkout-success", {
-          state: {
-            customerInfo: data,
-            orderedItems: items,
-            orderTotal: calculateFinalTotal(), // Use your logic here
-          },
-        });
-      } else if (data.paymentMethod === "phonepe") {
-        const { ok, result } = await initiatePhonePePayment(data, newOrderId);
-
-        if (ok && result.paymentUrl) {
-          
-          window.location.href = result.paymentUrl;
-        } else {
-          toast.error(result.message || "Payment initiation failed.");
-        }
-      }
-    } catch (err) {
-      console.error("❌ Error placing order:", err);
-      toast.error("Something went wrong during checkout.");
-    } finally {
-      setIsSubmitting(false);
+    if (data.paymentMethod === "cod") {
+      // For COD, directly send the order to the backend
+      await sendOrderToBackend(data);
+    } else if (data.paymentMethod === "phonepe") {
+      // For PhonePe, initiate payment process
+      await initiatePhonePePayment(data);
     }
   };
+
 
   // ... your JSX form using onSubmit
 
