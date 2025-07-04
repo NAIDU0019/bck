@@ -305,16 +305,27 @@ const CheckoutPage = () => {
 
   // Handle form submission
   const onSubmit = async (data: CheckoutFormValues) => {
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
-    if (data.paymentMethod === "cod") {
-      // For COD, directly send the order to the backend
+  if (data.paymentMethod === "cod") {
+    await sendOrderToBackend(data);
+  } else if (data.paymentMethod === "phonepe") {
+    const { ok, result } = await initiatePhonePePayment(data, generateOrderId());
+
+    if (ok && result.paymentUrl) {
+      // ✅ Save order BEFORE redirect
       await sendOrderToBackend(data);
-    } else if (data.paymentMethod === "phonepe") {
-      // For PhonePe, initiate payment process
-      await initiatePhonePePayment(data);
+
+      // ✅ Then redirect
+      window.location.href = result.paymentUrl;
+    } else {
+      toast.error(result.message || "Payment failed.");
     }
-  };
+  }
+
+  setIsSubmitting(false);
+};
+
 
   // Initiate PhonePe payment
 const initiatePhonePePayment = async (formData, orderId) => {
