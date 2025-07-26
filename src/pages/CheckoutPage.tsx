@@ -178,13 +178,13 @@ const CheckoutPage = () => {
   // 4. Calculate Shipping Cost based on original subtotal for thresholds
   let shippingCost = 0;
   if (subtotal > 1000) {
-    shippingCost = 0; // Free shipping over ₹1000
+    shippingCost = 100; // Free shipping over ₹1000
   } else if (subtotal < 250) {
-    shippingCost = 5;
+    shippingCost = 49;
   } else if (subtotal < 500) {
-    shippingCost = 65;
+    shippingCost = 59;
   } else {
-    shippingCost = 70; // For subtotals between ₹500 and ₹1000 (inclusive)
+    shippingCost = 79; // For subtotals between ₹500 and ₹1000 (inclusive)
   }
 
   // 5. Calculate Taxes (applied to discounted subtotal)
