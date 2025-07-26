@@ -20,7 +20,13 @@ const dryMangoPrices = { "100": 55, "250": 129, "500": 239, "1000": 449 };
 
 const chickenPrices = { "100": 130, "250": 299, "500": 498, "1000": 999 };
 const muttonPrices = { "100": 180, "250": 449, "500": 899, "1000": 1799 };
-const fishPrices = { "100": 100, "250": 199, "500": 397, "1000": 889 };
+const fishPrices = {
+  "100": 199,
+  "250": 379,
+  "500": 749,
+  "1000": 1499
+};
+
 const prawnPrices = {
   "100": 199,
   "250": 399,
@@ -33,7 +39,7 @@ const gonguraChickenPrices = { "100": 89, "250": 249, "500": 499, "1000": 899 };
 
 const defaultStock = { "100": 10, "250": 30, "500": 30, "1000": 30 };
 const limitedStock = { "100": 5, "250": 18, "500": 30, "1000": 30 };
-const veryLimitedStock = { "100": 5, "250": 9, "500": 30, "1000": 30 };
+const veryLimitedStock = { "100": 9, "250": 9, "500": 30, "1000": 30 };
 
 export const products: Product[] = [
   {
