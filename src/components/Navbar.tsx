@@ -185,25 +185,23 @@ export default function Navbar() {
 
         {/* Scrolling Bar */}
         <div className="bg-spice-600 text-white py-2 overflow-hidden whitespace-nowrap">
-          <div
-            className="inline-block animate-scroll px-4"
-            style={{ minWidth: "100%" }}
-          >
-            🚨 Orders OPEN from June 1, 2025! 🚨 Please contact us via{" "}
-            <a
+  <div
+    className="inline-block animate-scroll px-4"
+    style={{ minWidth: "100%" }}
+  >
+    🔥 <strong>We’re LIVE!</strong> Place Your Orders Now for the Freshest Homemade Pickles! 🥭💥 Contact us via{" "}
+    <a
+      href="https://wa.me/7995059659"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline font-semibold"
+    >
+      WhatsApp
+    </a>{" "}
+    to book yours before we sell out! 🚚💨
+  </div>
+</div>
 
-
-              href="https://wa.me/7995059659"
-
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold"
-            >
-              WhatsApp
-            </a>{" "}
-            for booking. Don’t miss your chance to savor the freshest pickles! 🥭📞
-          </div>
-        </div>
       </nav>
 
       {/* Cart Drawer */}
