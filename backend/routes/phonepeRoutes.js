@@ -32,10 +32,23 @@ const getPhonePeClient = () => {
 // ✅ INITIATE PAYMENT
 router.post("/", async (req, res) => {
   try {
-    const { amount, customer, customerInfo, orderedItems, orderDetails, paymentMethod, appliedCoupon } = req.body;
+    const {
+      amount,
+      customerInfo = {},
+      orderedItems = [],
+      orderDetails,
+      paymentMethod,
+      appliedCoupon,
+    } = req.body;
 
+    // Validate amount
     if (!amount || isNaN(amount)) {
       return res.status(400).json({ message: "Invalid or missing amount" });
+    }
+
+    // Validate orderDetails
+    if (!orderDetails || typeof orderDetails.subtotal !== "number") {
+      return res.status(400).json({ message: "Missing or malformed orderDetails" });
     }
 
     const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -58,19 +71,19 @@ router.post("/", async (req, res) => {
     const response = await client.pay(payRequest);
 
     if (response?.redirectUrl) {
-      // Optionally, create a pending order record
+      // Create a pending order record
       await supabase.from("orders").insert({
         order_id: orderId,
         customer_info: customerInfo,
         ordered_items: orderedItems,
-        subtotal: orderDetails.subtotal,
-        discount_amount: orderDetails.discountAmount,
-        taxes: orderDetails.taxes,
-        shipping_cost: orderDetails.shippingCost,
-        additional_fees: orderDetails.additionalFees,
-        total_amount: orderDetails.finalTotal,
-        payment_method: paymentMethod,
-        applied_coupon: appliedCoupon,
+        subtotal: orderDetails?.subtotal ?? null,
+        discount_amount: orderDetails?.discountAmount ?? null,
+        taxes: orderDetails?.taxes ?? null,
+        shipping_cost: orderDetails?.shippingCost ?? null,
+        additional_fees: orderDetails?.additionalFees ?? null,
+        total_amount: orderDetails?.finalTotal ?? null,
+        payment_method: paymentMethod ?? null,
+        applied_coupon: appliedCoupon ?? null,
         order_status: "pending",
       });
 
@@ -90,14 +103,13 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ WEBHOOK ENDPOINT (Optional if PhonePe sends notifications)
+// ✅ WEBHOOK ENDPOINT
 router.post("/webhook", express.json(), async (req, res) => {
   const { orderId, state } = req.body;
 
   console.log("📬 PhonePe webhook hit:", req.body);
 
-  // Verify signature if needed (depends on PhonePe)
-  // Optional: Update DB based on state
+  // Optional: verify signature and update DB
 
   res.status(200).send("Webhook received");
 });
@@ -112,11 +124,12 @@ router.get("/status/:orderId", async (req, res) => {
     console.log(`📡 Payment status for ${orderId}:`, statusRes);
 
     if (statusRes.success && statusRes.data?.status === "SUCCESS") {
-      await saveOrderToDB(txnId);
+      const transactionId = statusRes.data.transactionId;
+
       const { data, error } = await supabase
         .from("orders")
         .update({
-          payment_id: statusRes.data.transactionId,
+          payment_id: transactionId,
           order_status: "paid",
         })
         .eq("order_id", orderId)
