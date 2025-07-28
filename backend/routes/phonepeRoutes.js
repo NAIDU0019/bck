@@ -100,8 +100,12 @@ router.get("/status/:orderId", async (req, res) => {
 
   try {
     const statusRes = await client.checkStatus(orderId);
+    const status = statusRes.data?.status; // Extract actual status
 
-    if (statusRes.success && statusRes.data?.status === "SUCCESS") {
+    console.log("🔍 PhonePe Status:", status);
+
+    // Only proceed if it's a real success
+    if (status === "SUCCESS") {
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -113,7 +117,7 @@ router.get("/status/:orderId", async (req, res) => {
 
       if (error) return res.status(500).json({ message: "DB update failed", error });
 
-      // Send confirmation email
+      // Optional: send confirmation email
       const backendBaseUrl = process.env.BACKEND_URL || "http://localhost:5000";
       await axios.post(`${backendBaseUrl}/api/send-email`, {
         ...data[0].customer_info,
@@ -130,15 +134,22 @@ router.get("/status/:orderId", async (req, res) => {
         orderId: data[0].order_id,
       });
 
-      return res.json({ message: "Payment confirmed", order: data[0] });
+      return res.json({ message: "✅ Payment confirmed", order: data[0] });
     }
 
-    return res.json({ message: "Payment not confirmed yet", status: statusRes.data?.status });
+    // ❌ Handle cancelled or failed cases
+    if (status === "FAILED" || status === "CANCELLED") {
+      // Optional: update DB or notify frontend
+      return res.json({ message: `❌ Payment ${status.toLowerCase()}`, status });
+    }
+
+    return res.json({ message: "⏳ Payment pending or unknown", status });
   } catch (err) {
     console.error("❌ Error in status check:", err.message);
     return res.status(500).json({ error: "Unable to check payment status" });
   }
 });
+
 
 
 // ✅ Export router with injected Supabase instance
