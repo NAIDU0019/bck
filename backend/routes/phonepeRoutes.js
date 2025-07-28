@@ -32,13 +32,24 @@ const getPhonePeClient = () => {
 // ✅ INITIATE PAYMENT
 router.post("/", async (req, res) => {
   try {
-    const { amount, customer, customerInfo, orderedItems, orderDetails, paymentMethod, appliedCoupon } = req.body;
+    const {
+      amount,
+      customerInfo,
+      orderedItems,
+      orderDetails,
+      paymentMethod,
+      appliedCoupon,
+    } = req.body;
 
     if (!amount || isNaN(amount)) {
       return res.status(400).json({ message: "Invalid or missing amount" });
     }
 
-    const orderId = ORD-${Date.now()}-${Math.floor(Math.random() * 10000)};
+    if (!orderDetails || typeof orderDetails.subtotal !== "number") {
+      return res.status(400).json({ message: "Missing or malformed orderDetails" });
+    }
+
+    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const redirectUrl = process.env.REDIRECT_URL;
     const callbackUrl = process.env.CALLBACK_URL;
 
@@ -58,8 +69,7 @@ router.post("/", async (req, res) => {
     const response = await client.pay(payRequest);
 
     if (response?.redirectUrl) {
-      // Optionally, create a pending order record
-      await supabase.from("orders").insert({
+      const { error } = await supabase.from("orders").insert({
         order_id: orderId,
         customer_info: customerInfo,
         ordered_items: orderedItems,
@@ -73,6 +83,11 @@ router.post("/", async (req, res) => {
         applied_coupon: appliedCoupon,
         order_status: "pending",
       });
+
+      if (error) {
+        console.error("❌ Supabase insert error:", error);
+        return res.status(500).json({ message: "Order could not be saved", error });
+      }
 
       return res.status(200).json({
         paymentUrl: response.redirectUrl,
@@ -90,29 +105,27 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ WEBHOOK ENDPOINT (Optional if PhonePe sends notifications)
+// ✅ WEBHOOK ENDPOINT
 router.post("/webhook", express.json(), async (req, res) => {
   const { orderId, state } = req.body;
 
   console.log("📬 PhonePe webhook hit:", req.body);
 
-  // Verify signature if needed (depends on PhonePe)
-  // Optional: Update DB based on state
+  // Add signature validation here if required
 
   res.status(200).send("Webhook received");
 });
 
-// ✅ POLL PAYMENT STATUS & UPDATE ORDER
+// ✅ POLL PAYMENT STATUS
 router.get("/status/:orderId", async (req, res) => {
   const orderId = req.params.orderId;
   const client = getPhonePeClient();
 
   try {
     const statusRes = await client.checkStatus(orderId);
-    console.log(📡 Payment status for ${orderId}:, statusRes);
+    console.log(`📡 Payment status for ${orderId}:`, statusRes);
 
     if (statusRes.success && statusRes.data?.status === "SUCCESS") {
-      await saveOrderToDB(txnId);
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -122,11 +135,13 @@ router.get("/status/:orderId", async (req, res) => {
         .eq("order_id", orderId)
         .select();
 
-      if (error) return res.status(500).json({ message: "DB update failed", error });
+      if (error) {
+        return res.status(500).json({ message: "DB update failed", error });
+      }
 
       // Send confirmation email
       const backendBaseUrl = process.env.BACKEND_URL || "http://localhost:5000";
-      await axios.post(${backendBaseUrl}/api/send-email, {
+      await axios.post(`${backendBaseUrl}/api/send-email`, {
         ...data[0].customer_info,
         paymentMethod: data[0].payment_method,
         orderDetails: {
