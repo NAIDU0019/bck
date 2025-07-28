@@ -1,171 +1,92 @@
 const express = require("express");
+const crypto = require("crypto");
 const axios = require("axios");
-const {
-  StandardCheckoutClient,
-  Env,
-  StandardCheckoutPayRequest,
-} = require("pg-sdk-node");
-
 const router = express.Router();
-let supabase = null; // will be injected
-let phonepeClient = null;
 
-// ✅ Initialize PhonePe client
-const getPhonePeClient = () => {
-  if (!phonepeClient) {
-    const clientId = process.env.PHONEPE_CLIENT_ID;
-    const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
-    const clientVersion = parseInt(process.env.PHONEPE_CLIENT_VERSION || "1");
-    const env = process.env.PHONEPE_ENV === "PRODUCTION" ? Env.PRODUCTION : Env.SANDBOX;
+const saltKey = process.env.PHONEPE_SALT_KEY;
+const merchantId = process.env.PHONEPE_MERCHANT_ID;
+const saltIndex = 1;
 
-    if (!clientId || !clientSecret) {
-      throw new Error("PhonePe credentials missing from environment variables.");
-    }
+const phonepeUrl = "https://api-preprod.phonepe.com/apis/pg-sandbox";
+const redirectUrl = "https://yourdomain.com/phonepe-redirect"; // Replace with your redirect URL
 
-    phonepeClient = StandardCheckoutClient.getInstance(clientId, clientSecret, clientVersion, env);
-    console.log("✅ PhonePe client initialized");
-  }
-
-  return phonepeClient;
-};
-
-// ✅ INITIATE PAYMENT
 router.post("/", async (req, res) => {
   try {
     const {
       amount,
-      customerInfo = {},
-      orderedItems = [],
+      customerInfo,
+      orderedItems,
       orderDetails,
       paymentMethod,
       appliedCoupon,
     } = req.body;
 
-    // Validate amount
-    if (!amount || isNaN(amount)) {
-      return res.status(400).json({ message: "Invalid or missing amount" });
+    // Validate required fields
+    if (!amount || typeof amount !== "number") {
+      return res.status(400).json({ message: "Invalid or missing 'amount'" });
     }
 
-    // Validate orderDetails
     if (!orderDetails || typeof orderDetails.subtotal !== "number") {
-      return res.status(400).json({ message: "Missing or malformed orderDetails" });
+      return res.status(400).json({ message: "Missing or malformed 'orderDetails'" });
     }
 
-    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const redirectUrl = process.env.REDIRECT_URL;
-    const callbackUrl = process.env.CALLBACK_URL;
+    const transactionId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    if (!redirectUrl || !callbackUrl) {
-      return res.status(500).json({ message: "Missing REDIRECT_URL or CALLBACK_URL in environment" });
-    }
+    const payload = {
+      merchantId,
+      merchantTransactionId: transactionId,
+      merchantUserId: "user-" + Date.now(), // optional
+      amount: amount,
+      redirectUrl: redirectUrl,
+      redirectMode: "POST",
+      callbackUrl: redirectUrl,
+      paymentInstrument: {
+        type: "PAY_PAGE",
+      },
+      metadata: {
+        customerInfo,
+        orderedItems,
+        orderDetails,
+        paymentMethod,
+        appliedCoupon,
+      },
+    };
 
-    console.log("🧾 Initiating PhonePe payment for:", orderId);
+    const payloadString = JSON.stringify(payload);
+    const base64EncodedPayload = Buffer.from(payloadString).toString("base64");
 
-    const payRequest = StandardCheckoutPayRequest.builder()
-      .merchantOrderId(orderId)
-      .amount(amount)
-      .redirectUrl(redirectUrl)
-      .build({ callbackUrl });
+    const dataToHash = base64EncodedPayload + "/pg/v1/pay" + saltKey;
+    const sha256Hash = crypto.createHash("sha256").update(dataToHash).digest("hex");
+    const xVerify = sha256Hash + "###" + saltIndex;
 
-    const client = getPhonePeClient();
-    const response = await client.pay(payRequest);
+    const options = {
+      method: "POST",
+      url: `${phonepeUrl}/pg/v1/pay`,
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": xVerify,
+      },
+      data: {
+        request: base64EncodedPayload,
+      },
+    };
 
-    if (response?.redirectUrl) {
-      // Create a pending order record
-      await supabase.from("orders").insert({
-        order_id: orderId,
-        customer_info: customerInfo,
-        ordered_items: orderedItems,
-        subtotal: orderDetails?.subtotal ?? null,
-        discount_amount: orderDetails?.discountAmount ?? null,
-        taxes: orderDetails?.taxes ?? null,
-        shipping_cost: orderDetails?.shippingCost ?? null,
-        additional_fees: orderDetails?.additionalFees ?? null,
-        total_amount: orderDetails?.finalTotal ?? null,
-        payment_method: paymentMethod ?? null,
-        applied_coupon: appliedCoupon ?? null,
-        order_status: "pending",
-      });
+    const phonePeRes = await axios(options);
+    const redirectURL = phonePeRes.data.data.instrumentResponse.redirectInfo.url;
 
-      return res.status(200).json({
-        paymentUrl: response.redirectUrl,
-        orderId,
-      });
-    } else {
-      return res.status(500).json({ message: "PhonePe did not return a payment redirect URL" });
-    }
-  } catch (err) {
-    console.error("❌ PhonePe Payment Error:", err);
+    return res.status(200).json({
+      message: "PhonePe client initialized",
+      transactionId,
+      redirectURL,
+    });
+
+  } catch (error) {
+    console.error("❌ PhonePe Payment Error:", error);
     return res.status(500).json({
       message: "PhonePe payment initiation failed",
-      error: err.message,
+      error: error.message || "Unexpected error",
     });
   }
 });
 
-// ✅ WEBHOOK ENDPOINT
-router.post("/webhook", express.json(), async (req, res) => {
-  const { orderId, state } = req.body;
-
-  console.log("📬 PhonePe webhook hit:", req.body);
-
-  // Optional: verify signature and update DB
-
-  res.status(200).send("Webhook received");
-});
-
-// ✅ POLL PAYMENT STATUS & UPDATE ORDER
-router.get("/status/:orderId", async (req, res) => {
-  const orderId = req.params.orderId;
-  const client = getPhonePeClient();
-
-  try {
-    const statusRes = await client.checkStatus(orderId);
-    console.log(`📡 Payment status for ${orderId}:`, statusRes);
-
-    if (statusRes.success && statusRes.data?.status === "SUCCESS") {
-      const transactionId = statusRes.data.transactionId;
-
-      const { data, error } = await supabase
-        .from("orders")
-        .update({
-          payment_id: transactionId,
-          order_status: "paid",
-        })
-        .eq("order_id", orderId)
-        .select();
-
-      if (error) return res.status(500).json({ message: "DB update failed", error });
-
-      // Send confirmation email
-      const backendBaseUrl = process.env.BACKEND_URL || "http://localhost:5000";
-      await axios.post(`${backendBaseUrl}/api/send-email`, {
-        ...data[0].customer_info,
-        paymentMethod: data[0].payment_method,
-        orderDetails: {
-          items: data[0].ordered_items,
-          subtotal: data[0].subtotal,
-          discountAmount: data[0].discount_amount,
-          taxes: data[0].taxes,
-          shippingCost: data[0].shipping_cost,
-          additionalFees: data[0].additional_fees,
-          finalTotal: data[0].total_amount,
-        },
-        orderId: data[0].order_id,
-      });
-
-      return res.json({ message: "✅ Payment confirmed", order: data[0] });
-    }
-
-    return res.json({ message: "Payment not confirmed yet", status: statusRes.data?.status });
-  } catch (err) {
-    console.error("❌ Error checking PhonePe status:", err.message);
-    return res.status(500).json({ error: "Unable to check payment status" });
-  }
-});
-
-// ✅ Inject Supabase instance
-module.exports = (injectedSupabase) => {
-  supabase = injectedSupabase;
-  return router;
-};
+module.exports = router;
